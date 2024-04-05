@@ -146,6 +146,7 @@ const handlers = [
 
 @Module({
   imports: [
+    ConfigModule.forRoot(),
     TypeOrmModule.forRoot({
       type: 'postgres',
       host: 'localhost',
@@ -163,7 +164,6 @@ const handlers = [
       },
     ]),
     CqrsModule,
-    ConfigModule.forRoot(),
     MongooseModule.forRoot(process.env.MONGO_URL!),
     JwtModule.register({}),
     MongooseModule.forFeature([
