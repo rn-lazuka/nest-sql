@@ -1,5 +1,5 @@
 import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
-import { UserDBType } from '../../users/types';
+import { UserFullData } from '../../users/types';
 import { UsersQueryRepository } from '../../users/users.query-repository';
 import * as bcrypt from 'bcryptjs';
 
@@ -16,14 +16,13 @@ export class ValidateUserUseCase
 {
   constructor(protected usersQueryRepository: UsersQueryRepository) {}
 
-  async execute(command: ValidateUserCommand): Promise<UserDBType | false> {
+  async execute(command: ValidateUserCommand): Promise<UserFullData | false> {
     const { password, loginOrEmail } = command;
     const user =
       await this.usersQueryRepository.getUserByLoginOrEmail(loginOrEmail);
     if (!user || !user.emailConfirmation.isConfirmed) {
       return false;
     }
-
     return (await bcrypt.compare(password, user.passwordHash)) ? user : false;
   }
 }

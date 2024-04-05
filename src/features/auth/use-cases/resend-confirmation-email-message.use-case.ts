@@ -39,7 +39,7 @@ export class ResendConfirmationEmailMsgUseCase
     };
 
     const result = await this.usersRepository.updateUserConfirmationData(
-      user._id.toString(),
+      user.id,
       confirmationInfo,
     );
     if (!result) {

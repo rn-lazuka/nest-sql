@@ -4,12 +4,7 @@ import { AccessRefreshTokens } from '../jwt.types.service';
 import { JwtQueryRepository } from '../jwt.query.repository';
 import { DevicesRepository } from '../../devices/infrastructure/repository/devices.repository';
 import { CheckIsTokenValidCommand } from './check-is-token-valid.use-case';
-import {
-  RefreshToken,
-  RefreshTokenModelType,
-} from '../../auth/domain/refreshToken.schema';
 import { AuthRepository } from '../../auth/infrastructure/repository/auth.repository';
-import { InjectModel } from '@nestjs/mongoose';
 
 export class ChangeTokenByRefreshTokenCommand {
   constructor(
@@ -27,8 +22,6 @@ export class ChangeTokenByRefreshTokenUseCase
     protected jwtQueryRepository: JwtQueryRepository,
     protected devicesRepository: DevicesRepository,
     protected commandBus: CommandBus,
-    @InjectModel(RefreshToken.name)
-    private refreshTokenModel: RefreshTokenModelType,
     private authRepository: AuthRepository,
   ) {}
 
@@ -43,13 +36,7 @@ export class ChangeTokenByRefreshTokenUseCase
     if (!isTokenValid) {
       throw new Error('Refresh token is invalid.');
     }
-
-    const deactivatedRefreshToken = this.refreshTokenModel.createInstance(
-      { refreshToken: cookieRefreshToken },
-      this.refreshTokenModel,
-    );
-    await this.authRepository.save(deactivatedRefreshToken);
-
+    await this.authRepository.save(cookieRefreshToken);
     const accessToken = this.jwtServiceNest.sign(
       { userId },
       {
@@ -70,18 +57,16 @@ export class ChangeTokenByRefreshTokenUseCase
     if (!payloadNewRefresh?.iat) {
       throw new Error('Refresh token is invalid.');
     }
-
-    const device = await this.devicesRepository.getDeviceInstance(
+    const device = await this.devicesRepository.getDeviceInfo(
       isTokenValid.deviceId,
     );
     if (!device) throw new Error('DeviceId in refresh token is invalid.');
 
-    device.lastActiveDate = new Date(
-      payloadNewRefresh.iat * 1000,
-    ).toISOString();
-
-    await this.devicesRepository.save(device);
-
+    const lastActiveDate = new Date(payloadNewRefresh.iat * 1000).toISOString();
+    await this.devicesRepository.updateDeviceLastActiveDate(
+      lastActiveDate,
+      device.deviceId,
+    );
     return {
       accessToken,
       refreshToken,

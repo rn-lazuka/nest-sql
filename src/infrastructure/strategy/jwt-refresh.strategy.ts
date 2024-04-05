@@ -22,9 +22,8 @@ export class JwtRefreshStrategy extends PassportStrategy(
   }
 
   async validate(payload: any) {
-    const user = this.usersQueryRepository.getUserById(payload.userId);
+    const user = await this.usersQueryRepository.getUserById(payload.userId);
     if (!user) throw new UnauthorizedException();
-
     const device = await this.devicesQueryRepository.getDeviceById(
       payload.deviceId!,
     );
@@ -35,7 +34,6 @@ export class JwtRefreshStrategy extends PassportStrategy(
     ) {
       throw new UnauthorizedException();
     }
-
     return { id: payload.userId };
   }
 

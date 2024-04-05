@@ -1,75 +1,139 @@
 import { Injectable } from '@nestjs/common';
-import { InjectModel } from '@nestjs/mongoose';
-import { User, UserModelType } from './userSchema';
-import { EmailAndLoginTerm, UserDBType, UserQueryModel } from './types';
+import { UserDBType, UserFullData, UserQueryModel } from './types';
 import {
   UsersPaginationType,
   UserViewType,
 } from './models/output/user.output.model';
 import { getQueryParams } from '../../infrastructure/utils/getQueryParams';
+import { InjectDataSource } from '@nestjs/typeorm';
+import { DataSource } from 'typeorm';
+import {
+  convertUserToFullData,
+  convertUserToViewModel,
+} from './features/users.functions.helpers';
 
 @Injectable()
 export class UsersQueryRepository {
-  constructor(
-    @InjectModel(User.name)
-    private userModel: UserModelType,
-  ) {}
+  constructor(@InjectDataSource() protected dataSource: DataSource) {}
 
   async getAllUsers(query: UserQueryModel): Promise<UsersPaginationType> {
-    const emailAndLoginTerm: EmailAndLoginTerm = [];
     const paramsOfElems = getQueryParams(query);
-
-    if (!!query?.searchEmailTerm)
-      emailAndLoginTerm.push({
-        email: { $regex: query.searchEmailTerm, $options: 'i' },
-      });
-    if (!!query?.searchLoginTerm)
-      emailAndLoginTerm.push({
-        login: { $regex: query.searchLoginTerm, $options: 'i' },
-      });
-    const filters =
-      emailAndLoginTerm.length > 0 ? { $or: emailAndLoginTerm } : {};
-    const allUsersCount = await this.userModel.countDocuments(filters);
-
-    const allUsersOnPages = await this.userModel
-      .find(filters)
-      .skip((paramsOfElems.pageNumber - 1) * paramsOfElems.pageSize)
-      .limit(paramsOfElems.pageSize)
-      .sort(paramsOfElems.paramSort);
+    const res = await this.dataSource.query(
+      `
+      SELECT 
+        u.* 
+      FROM public.users as u
+      WHERE 
+        (u.login = $1 OR $1 IS NULL) AND 
+        (u.email = $2 OR $2 IS NULL)
+      ORDER BY u.id ASC
+      LIMIT $3 OFFSET $4;
+    `,
+      [
+        query.searchLoginTerm,
+        query.searchEmailTerm,
+        paramsOfElems.pageSize,
+        (paramsOfElems.pageNumber - 1) * paramsOfElems.pageSize,
+      ],
+    );
+    const countResponse = await this.dataSource.query(
+      `
+      SELECT COUNT(*) as count
+      FROM public.users as u
+      WHERE $1 = u.login or $2 = u.email
+    `,
+      [query.searchLoginTerm, query.searchEmailTerm],
+    );
 
     return {
-      pagesCount: Math.ceil(allUsersCount / paramsOfElems.pageSize),
+      pagesCount: Math.ceil(+countResponse[0].count / paramsOfElems.pageSize),
       page: paramsOfElems.pageNumber,
       pageSize: paramsOfElems.pageSize,
-      totalCount: allUsersCount,
-      items: allUsersOnPages.map((p) => p.convertToViewModel()),
+      totalCount: +countResponse[0].count,
+      items: res.map((p: UserDBType) => convertUserToViewModel(p)),
     };
   }
 
   async getUserById(id: string): Promise<UserViewType | null> {
-    const result = await this.userModel.findById(id);
-    return result ? result.convertToViewModel() : result;
+    const res = await this.dataSource.query(
+      `
+      SELECT 
+      u.* 
+      FROM public.users as u
+      WHERE $1 = u."id"
+    `,
+      [id],
+    );
+    return !!res.length ? convertUserToViewModel(res[0]) : null;
   }
 
   async getUserByLoginOrEmail(
     loginOrEmail: string,
-  ): Promise<UserDBType | null> {
-    return this.userModel
-      .findOne()
-      .or([{ login: loginOrEmail }, { email: loginOrEmail }]);
+  ): Promise<UserFullData | null> {
+    const res = await this.dataSource.query(
+      `
+      SELECT 
+      u.*,
+      ec."isConfirmed", 
+      ec."confirmationCode" as "emailConfirmationCode", 
+      ec."expirationDate" as "emailExpirationDate",
+      pr."confirmationCode" as "recoveryConfirmationCode",
+      pr."expirationDate" as "recoveryExpirationDate"
+      FROM public.users as u
+      LEFT JOIN public."emailConfirmation" as ec
+      ON ec."userId" = u."id"
+      LEFT JOIN public."passwordRecovery" as pr
+      ON pr."userId" = u.id
+      WHERE $1 in (u."email",u."login")
+    `,
+      [loginOrEmail],
+    );
+    return !!res.length ? convertUserToFullData(res[0]) : null;
   }
 
-  async getUserByConfirmationCode(code: string): Promise<UserDBType | null> {
-    return this.userModel.findOne({
-      'emailConfirmation.confirmationCode': code,
-    });
+  async getUserByConfirmationCode(code: string): Promise<UserFullData | null> {
+    const res = await this.dataSource.query(
+      `
+      SELECT 
+      u.*,
+      ec."confirmationCode" as "emailConfirmationCode", 
+      ec."expirationDate" as "emailExpirationDate",
+      pr."confirmationCode" as "recoveryConfirmationCode",
+      pr."expirationDate" as "recoveryExpirationDate"
+      FROM public.users as u
+      LEFT JOIN public."emailConfirmation" as ec
+      ON ec."userId" = u."id"
+      LEFT JOIN public."passwordRecovery" as pr
+      ON pr."userId" = u.id
+      WHERE ec."confirmationCode" = $1
+    `,
+      [code],
+    );
+
+    return !!res.length ? convertUserToFullData(res[0]) : null;
   }
 
   async getUserByPasswordRecoveryCode(
     code: string,
-  ): Promise<UserDBType | null> {
-    return this.userModel.findOne({
-      'recoveryData.recoveryCode': code,
-    });
+  ): Promise<UserFullData | null> {
+    const res = await this.dataSource.query(
+      `
+      SELECT 
+      u.*,
+      ec."confirmationCode" as "emailConfirmationCode", 
+      ec."expirationDate" as "emailExpirationDate",
+      pr."confirmationCode" as "recoveryConfirmationCode",
+      pr."expirationDate" as "recoveryExpirationDate"
+      FROM public.users as u
+      LEFT JOIN public."emailConfirmation" as ec
+      ON ec."userId" = u."id"
+      LEFT JOIN public."passwordRecovery" as pr
+      ON pr."userId" = u.id
+      WHERE pr."confirmationCode" = $1
+    `,
+      [code],
+    );
+
+    return !!res.length ? convertUserToFullData(res[0]) : null;
   }
 }

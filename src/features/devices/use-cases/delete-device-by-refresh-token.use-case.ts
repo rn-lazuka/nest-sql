@@ -1,10 +1,7 @@
 import { CommandBus, CommandHandler, ICommandHandler } from '@nestjs/cqrs';
 import { DevicesRepository } from '../infrastructure/repository/devices.repository';
 import { CheckIsTokenValidCommand } from '../../jwt/use-cases/check-is-token-valid.use-case';
-import {
-  RefreshToken,
-  RefreshTokenModelType,
-} from '../../auth/domain/refreshToken.schema';
+import { RefreshToken } from '../../auth/domain/refreshToken.schema';
 import { AuthRepository } from '../../auth/infrastructure/repository/auth.repository';
 import { InjectModel } from '@nestjs/mongoose';
 
@@ -19,8 +16,6 @@ export class DeleteDeviceByRefreshTokenUseCase
   constructor(
     protected deviceRepository: DevicesRepository,
     protected commandBus: CommandBus,
-    @InjectModel(RefreshToken.name)
-    private refreshTokenModel: RefreshTokenModelType,
     protected authRepository: AuthRepository,
   ) {}
 
@@ -32,16 +27,11 @@ export class DeleteDeviceByRefreshTokenUseCase
     if (!isTokenValid) {
       throw new Error('Refresh is invalid');
     }
-
     const isDeviceDeleted = await this.deviceRepository.deleteDeviceById(
       isTokenValid.deviceId,
     );
     if (isDeviceDeleted) {
-      const deactivatedRefreshToken = this.refreshTokenModel.createInstance(
-        { refreshToken },
-        this.refreshTokenModel,
-      );
-      await this.authRepository.save(deactivatedRefreshToken);
+      await this.authRepository.save(refreshToken);
       return true;
     }
     return false;

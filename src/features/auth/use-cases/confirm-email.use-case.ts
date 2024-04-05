@@ -35,7 +35,7 @@ export class ConfirmEmailUseCase
     }
 
     const result = await this.usersRepository.updateUserConfirmationStatus(
-      user._id.toString(),
+      user.id,
     );
     if (!result) {
       throw new Error('Email confirmation failed.');

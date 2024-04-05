@@ -24,15 +24,15 @@ import { UsersRepository } from './usersRepository';
 import { CommandBus } from '@nestjs/cqrs';
 import { CreateUserCommand } from './use-cases/create-user.use-case';
 
-@Controller('/users')
-export class UsersController {
+@Controller('/sa/users')
+export class UsersSAController {
   constructor(
     protected usersQueryRepository: UsersQueryRepository,
     protected usersRepository: UsersRepository,
     protected commandBus: CommandBus,
   ) {}
 
-  // @UseGuards(BasicAuthGuard)
+  @UseGuards(BasicAuthGuard)
   @Get()
   async getAllUsers(
     @Query() query: UserQueryModel,

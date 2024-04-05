@@ -1,63 +1,112 @@
 import { Injectable } from '@nestjs/common';
-import { InjectModel } from '@nestjs/mongoose';
-import { User, UserDocument, UserModelType } from './userSchema';
-import { EmailConfirmationInfo } from './types';
-import { ObjectId } from 'mongodb';
+import { EmailConfirmationInfo, UserDBType } from './types';
+import { InjectDataSource } from '@nestjs/typeorm';
+import { DataSource } from 'typeorm';
+import { CreateUserModel } from './models/input/user.input.model';
 
 @Injectable()
 export class UsersRepository {
-  constructor(@InjectModel(User.name) private userModel: UserModelType) {}
+  constructor(@InjectDataSource() protected dataSource: DataSource) {}
 
-  async save(user: UserDocument): Promise<void> {
-    await user.save();
-    return;
+  async saveUserData(user: CreateUserModel): Promise<UserDBType> {
+    const res = await this.dataSource.query(
+      `
+      INSERT INTO public.users(
+      login, email, "passwordHash")
+      VALUES ($1,$2,$3)
+      RETURNING id, login, email;
+    `,
+      [user.login, user.email, user.passwordHash],
+    );
+
+    await this.dataSource.query(
+      `
+      INSERT INTO public."passwordRecovery"("userId")
+      VALUES ($1);
+    `,
+      [res[0].id],
+    );
+    return res[0];
+  }
+  async saveUserConfirmationData(
+    userId: string,
+    data: Partial<EmailConfirmationInfo>,
+  ): Promise<EmailConfirmationInfo> {
+    const res = await this.dataSource.query(
+      `
+      INSERT INTO public."emailConfirmation"("userId", "confirmationCode", "expirationDate", "isConfirmed")
+      VALUES ($1,$2,$3,$4)
+      RETURNING "userId", "confirmationCode", "expirationDate", "isConfirmed"
+    `,
+      [userId, data.confirmationCode, data.expirationDate, data.isConfirmed],
+    );
+    return res[0];
   }
 
   async updateUserConfirmationData(id: string, data: EmailConfirmationInfo) {
-    const result = await this.userModel.findByIdAndUpdate(
-      id,
-      { emailConfirmation: data },
-      { new: true },
+    const res = await this.dataSource.query(
+      `
+    UPDATE public."emailConfirmation" as ec
+    SET "confirmationCode"=$2, "expirationDate"=$3, "isConfirmed"=$4
+    WHERE ec."userId" = $1
+    RETURNING "isConfirmed","userId","confirmationCode","expirationDate";
+    `,
+      [id, data.confirmationCode, data.expirationDate, data.isConfirmed],
     );
-    return result;
-  }
-  async updateUserConfirmationStatus(id: string) {
-    const result = await this.userModel.findByIdAndUpdate(
-      id,
-      { 'emailConfirmation.isConfirmed': true },
-      { new: true },
-    );
-    return result;
+    return !!res[0];
   }
 
-  async updatePassword(passwordHash: string, id: ObjectId): Promise<boolean> {
-    const result = await this.userModel.updateOne(
-      { _id: id },
-      { $set: { passwordHash } },
+  async updateUserConfirmationStatus(id: string) {
+    const res = await this.dataSource.query(
+      `
+    UPDATE public."emailConfirmation" as ec
+    SET "isConfirmed"=true
+    WHERE ec."userId" = $1
+    RETURNING "isConfirmed","userId","confirmationCode","expirationDate";
+    `,
+      [id],
     );
-    return result.modifiedCount === 1;
+    return !!res[0];
+  }
+
+  async updatePassword(passwordHash: string, id: string): Promise<boolean> {
+    const res = await this.dataSource.query(
+      `
+    UPDATE public.users as u
+    SET "passwordHash"=$2
+    WHERE u.id = $1
+    RETURNING "passwordHash","id","login","email"
+    `,
+      [id, passwordHash],
+    );
+    return !!res[0];
   }
 
   async updatePasswordRecoveryCode(
-    id: ObjectId,
+    id: string,
     newCode: string,
     newDate: Date,
   ): Promise<boolean> {
-    const result = await this.userModel.updateOne(
-      { _id: id },
-      {
-        $set: {
-          'passwordRecovery.confirmationCode': newCode,
-          'passwordRecovery.expirationDate': newDate,
-        },
-      },
+    const res = await this.dataSource.query(
+      `
+    UPDATE public."passwordRecovery" as pr
+    SET "confirmationCode"=$2, "expirationDate"=$3
+    WHERE pr."userId" = $1
+    RETURNING "userId","confirmationCode","expirationDate";
+    `,
+      [id, newCode, newDate],
     );
-
-    return result.modifiedCount === 1;
+    return !!res[0];
   }
 
   async deleteUser(id: string) {
-    const result = await this.userModel.findByIdAndDelete(id);
-    return !!result;
+    const res = await this.dataSource.query(
+      `
+      DELETE FROM public.users as u
+      WHERE u.id=$1;
+    `,
+      [id],
+    );
+    return !res[0];
   }
 }

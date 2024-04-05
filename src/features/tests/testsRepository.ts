@@ -2,7 +2,6 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Injectable } from '@nestjs/common';
 import { Post, PostModelType } from '../posts/postSchema';
 import { Blog, BlogModelType } from '../blogs/blogSchema';
-import { User, UserModelType } from '../users/userSchema';
 import { Comment, CommentModelType } from '../comments/commentSchema';
 import {
   CommentLikesInfo,
@@ -12,34 +11,40 @@ import {
   PostLikesInfo,
   PostLikesInfoModelType,
 } from '../likes-info/domain/post-likes-info.schema';
-import { Device, DeviceModelType } from '../devices/domain/device.schema';
+import { InjectDataSource } from '@nestjs/typeorm';
+import { DataSource } from 'typeorm';
 
 @Injectable()
 export class TestsRepository {
   constructor(
+    @InjectDataSource() protected dataSource: DataSource,
     @InjectModel(Post.name)
     private PostModel: PostModelType,
     @InjectModel(Blog.name)
     private BlogModel: BlogModelType,
-    @InjectModel(User.name)
-    private UserModel: UserModelType,
     @InjectModel(Comment.name)
     private CommentModel: CommentModelType,
     @InjectModel(CommentLikesInfo.name)
     private CommentLikesInfoModel: CommentLikesInfoModelType,
     @InjectModel(PostLikesInfo.name)
     private PostLikesInfoModel: PostLikesInfoModelType,
-    @InjectModel(Device.name)
-    private DeviceModel: DeviceModelType,
   ) {}
 
   async deleteAllData(): Promise<void> {
-    return Promise.all([
+    await this.dataSource.query(`
+    BEGIN;
+    TRUNCATE TABLE public.users RESTART IDENTITY CASCADE;
+    TRUNCATE TABLE public.devices;
+    TRUNCATE TABLE public.tokens;
+    TRUNCATE TABLE public."emailConfirmation";
+    TRUNCATE TABLE public."passwordRecovery";
+    COMMIT;
+    `);
+
+    Promise.all([
       this.PostModel.deleteMany({}),
       this.BlogModel.deleteMany({}),
-      this.UserModel.deleteMany({}),
       this.CommentModel.deleteMany({}),
-      this.DeviceModel.deleteMany({}),
       this.CommentLikesInfoModel.deleteMany({}),
       this.PostLikesInfoModel.deleteMany({}),
     ]).then(

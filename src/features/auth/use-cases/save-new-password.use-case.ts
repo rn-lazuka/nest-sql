@@ -38,7 +38,6 @@ export class SaveNewPasswordUseCase
         },
       ]);
     }
-
     if (user.passwordRecovery.expirationDate < new Date()) {
       throw new BadRequestException([
         {
@@ -49,7 +48,7 @@ export class SaveNewPasswordUseCase
     }
 
     const passwordHash = await this.cryptoAdapter.generateHash(newPassword);
-    await this.usersRepository.updatePassword(passwordHash, user._id);
+    await this.usersRepository.updatePassword(passwordHash, user.id);
 
     return true;
   }

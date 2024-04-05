@@ -4,6 +4,7 @@ import { DevicesRepository } from '../infrastructure/repository/devices.reposito
 import { UnauthorizedException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Device, DeviceModelType } from '../domain/device.schema';
+import { DeviceModel } from '../types/device';
 
 export class CreateNewDeviceCommand {
   constructor(
@@ -31,15 +32,16 @@ export class CreateNewDeviceUseCase
     if (!payloadToken) {
       throw new UnauthorizedException();
     }
-    const device = this.deviceModel.createInstance(
+    const device: DeviceModel = {
       ip,
       title,
-      payloadToken,
       userId,
-      this.deviceModel,
-    );
+      deviceId: payloadToken.deviceId,
+      lastActiveDate: new Date(payloadToken.iat! * 1000).toISOString(),
+      expirationDate: payloadToken.exp! - payloadToken.iat!,
+    };
 
-    await this.deviceRepository.save(device);
+    await this.deviceRepository.saveDevice(device);
     return;
   }
 }

@@ -1,22 +1,36 @@
 import { Injectable } from '@nestjs/common';
-import { InjectModel } from '@nestjs/mongoose';
 import { DeviceDBType } from '../../domain/devices.db.types';
 import { DeviceViewType } from '../../api/models/output/device.output.model';
-import { Device, DeviceModelType } from '../../domain/device.schema';
+import { InjectDataSource } from '@nestjs/typeorm';
+import { DataSource } from 'typeorm';
+import { convertDeviceToViewModel } from '../../features/device.function.helper';
 
 @Injectable()
 export class DevicesQueryRepository {
-  constructor(
-    @InjectModel(Device.name)
-    private deviceModel: DeviceModelType,
-  ) {}
+  constructor(@InjectDataSource() protected dataSource: DataSource) {}
 
   async getAllDevicesByUserId(userId: string): Promise<DeviceViewType[]> {
-    const devices = await this.deviceModel.find({ userId });
-    return devices.map((device) => device.convertToViewModel());
+    const res = await this.dataSource.query(
+      `
+      SELECT d.*
+      FROM public.devices as d
+      WHERE d."userId" = $1;
+    `,
+      [userId],
+    );
+    return res.map((device: DeviceDBType) => convertDeviceToViewModel(device));
   }
 
   async getDeviceById(deviceId: string): Promise<DeviceDBType | null> {
-    return this.deviceModel.findOne({ deviceId });
+    const res = await this.dataSource.query(
+      `
+      SELECT d.*
+      FROM public.devices as d
+      WHERE d."deviceId" = $1;
+    `,
+      [deviceId],
+    );
+
+    return res[0];
   }
 }

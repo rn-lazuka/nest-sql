@@ -22,7 +22,7 @@ import {
   NewPasswordModel,
   PasswordRecoveryModel,
 } from './models/input/password-flow-auth.input.model';
-import { SkipThrottle, Throttle, ThrottlerGuard } from '@nestjs/throttler';
+import { SkipThrottle, ThrottlerGuard } from '@nestjs/throttler';
 import { JwtRefreshGuard } from '../../../infrastructure/guards/jwt-refresh.guard';
 import { RefreshToken } from '../../../infrastructure/decorators/auth/refresh-token-param.decorator';
 import { ValidateEmailResendingGuard } from '../../../infrastructure/guards/validation-guards/validate-email-resending.guard';
@@ -58,7 +58,6 @@ export class AuthController {
     @TitleOfDevice() title: string,
   ) {
     const result = await this.commandBus.execute(new LoginUserCommand(userId));
-
     if (result) {
       await this.commandBus.execute(
         new CreateNewDeviceCommand(
@@ -68,7 +67,6 @@ export class AuthController {
           result.refreshToken,
         ),
       );
-
       res.cookie('refreshToken', result.refreshToken, {
         httpOnly: true,
         secure: true,

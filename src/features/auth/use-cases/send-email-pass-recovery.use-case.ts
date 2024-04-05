@@ -3,7 +3,6 @@ import add from 'date-fns/add';
 import { v4 as uuidv4 } from 'uuid';
 import { EmailManager } from '../../../infrastructure/managers/email-manager';
 import { UsersRepository } from '../../users/usersRepository';
-import { UserDBType } from '../../users/types';
 import { UsersQueryRepository } from '../../users/users.query-repository';
 
 export class SendEmailPassRecoveryCommand {
@@ -22,15 +21,14 @@ export class SendEmailPassRecoveryUseCase
 
   async execute(command: SendEmailPassRecoveryCommand): Promise<void> {
     const { email } = command;
-    const user: UserDBType | null =
-      await this.usersQueryRepository.getUserByLoginOrEmail(email);
+    const user = await this.usersQueryRepository.getUserByLoginOrEmail(email);
     if (!user) return;
 
     const newCode = uuidv4();
     const newDate = add(new Date(), { hours: 1 });
 
     await this.usersRepository.updatePasswordRecoveryCode(
-      user._id,
+      user.id,
       newCode,
       newDate,
     );

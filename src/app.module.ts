@@ -1,13 +1,5 @@
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
-import {
-  EmailConfirmation,
-  EmailConfirmationSchema,
-  PasswordRecovery,
-  PasswordRecoverySchema,
-  User,
-  UserSchema,
-} from './features/users/userSchema';
 import { ConfigModule } from '@nestjs/config';
 import { UsersController } from './features/users/usersController';
 import { UsersRepository } from './features/users/usersRepository';
@@ -90,12 +82,14 @@ import { UpdatePostLikeStatusUseCase } from './features/posts/use-cases/update-p
 import { CreateUserUseCase } from './features/users/use-cases/create-user.use-case';
 import { GetUserIdByAccessTokenUseCase } from './features/jwt/use-cases/getUserIdByAccessToken.use-case';
 import { CqrsModule } from '@nestjs/cqrs';
+import { TypeOrmModule } from '@nestjs/typeorm';
 import { CheckIsTokenValidUseCase } from './features/jwt/use-cases/check-is-token-valid.use-case';
 import { AuthRepository } from './features/auth/infrastructure/repository/auth.repository';
 import {
   RefreshToken,
   RefreshTokenSchema,
 } from './features/auth/domain/refreshToken.schema';
+import { UsersSAController } from './features/users/usersSAController';
 
 const queryRepositories = [
   CommentsQueryRepository,
@@ -152,6 +146,16 @@ const handlers = [
 
 @Module({
   imports: [
+    TypeOrmModule.forRoot({
+      type: 'postgres',
+      host: 'localhost',
+      port: 5432,
+      username: 'sql_user',
+      password: 'abc123',
+      database: 'NestApp',
+      autoLoadEntities: false,
+      synchronize: false,
+    }),
     ThrottlerModule.forRoot([
       {
         ttl: 10000,
@@ -164,14 +168,11 @@ const handlers = [
     JwtModule.register({}),
     MongooseModule.forFeature([
       { name: RefreshToken.name, schema: RefreshTokenSchema },
-      { name: User.name, schema: UserSchema },
       { name: Blog.name, schema: BlogSchema },
       { name: Post.name, schema: PostSchema },
       { name: Comment.name, schema: CommentSchema },
       { name: LikesInfo.name, schema: LikesInfoSchema },
       { name: CommentatorInfo.name, schema: CommentatorInfoSchema },
-      { name: EmailConfirmation.name, schema: EmailConfirmationSchema },
-      { name: PasswordRecovery.name, schema: PasswordRecoverySchema },
       { name: CommentLikesInfo.name, schema: CommentsLikesInfoSchema },
       { name: PostLikesInfo.name, schema: PostsLikesInfoSchema },
       { name: Device.name, schema: DeviceSchema },
@@ -184,6 +185,7 @@ const handlers = [
     PostsController,
     CommentsController,
     UsersController,
+    UsersSAController,
     TestsController,
   ],
   providers: [

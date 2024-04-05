@@ -1,37 +1,75 @@
-import { InjectModel } from '@nestjs/mongoose';
 import { Injectable } from '@nestjs/common';
-import {
-  Device,
-  DeviceDocument,
-  DeviceModelType,
-} from '../../domain/device.schema';
+import { DeviceModel } from '../../types/device';
+import { InjectDataSource } from '@nestjs/typeorm';
+import { DataSource } from 'typeorm';
+import { DeviceDBType } from '../../domain/devices.db.types';
 
 @Injectable()
 export class DevicesRepository {
-  constructor(
-    @InjectModel(Device.name)
-    private deviceModel: DeviceModelType,
-  ) {}
+  constructor(@InjectDataSource() protected dataSource: DataSource) {}
 
-  async save(device: DeviceDocument): Promise<void> {
-    await device.save();
-    return;
+  async saveDevice(device: DeviceModel): Promise<void> {
+    await this.dataSource.query(
+      `
+    INSERT INTO public.devices(ip, title, "lastActiveDate", "deviceId", "userId", "expirationDate")
+    VALUES ($1,$2,$3,$4,$5,$6);
+    `,
+      [
+        device.ip,
+        device.title,
+        device.lastActiveDate,
+        device.deviceId,
+        device.userId,
+        device.expirationDate,
+      ],
+    );
   }
 
-  async getDeviceInstance(deviceId: string): Promise<null | DeviceDocument> {
-    const device = await this.deviceModel.findOne({ deviceId });
-    return device;
+  async updateDeviceLastActiveDate(
+    lastActiveDate: string,
+    deviceId: string,
+  ): Promise<void> {
+    await this.dataSource.query(
+      `
+      UPDATE public.devices as d
+      SET "lastActiveDate"=$1
+      WHERE d."deviceId"=$2;
+    `,
+      [lastActiveDate, deviceId],
+    );
+  }
+
+  async getDeviceInfo(deviceId: string): Promise<null | DeviceDBType> {
+    const res = await this.dataSource.query(
+      `
+      SELECT u.*
+      FROM public.devices as d
+      WHERE d."deviceId"=$1;
+    `,
+      [deviceId],
+    );
+    return res[0];
   }
 
   async deleteDevicesExcludeCurrent(deviceId: string): Promise<boolean> {
-    const result = await this.deviceModel.deleteMany({
-      deviceId: { $ne: deviceId },
-    });
-    return result.deletedCount > 0;
+    await this.dataSource.query(
+      `
+      DELETE FROM public.devices as d
+      WHERE d."deviceId" <> $1;
+    `,
+      [deviceId],
+    );
+    return true;
   }
 
   async deleteDeviceById(deviceId: string): Promise<boolean> {
-    const result = await this.deviceModel.findOneAndDelete({ deviceId });
-    return !!result;
+    await this.dataSource.query(
+      `
+      DELETE FROM public.devices as d
+      WHERE d."deviceId" = $1;
+    `,
+      [deviceId],
+    );
+    return true;
   }
 }

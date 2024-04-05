@@ -1,5 +1,4 @@
 import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
-import { v4 as uuidv4 } from 'uuid';
 import { JwtService as NestJwtService } from '@nestjs/jwt/dist/jwt.service';
 
 export class CreateAccessJwtTokenCommand {
