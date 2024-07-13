@@ -1,6 +1,5 @@
 import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
 import { LikeStatus } from '../../../infrastructure/helpers/enums/like-status';
-import { LikesInfoRepository } from '../infrastructure/repository/likes-info.repository';
 
 export class UpdatePostLikeInfoCommand {
   constructor(
@@ -14,19 +13,10 @@ export class UpdatePostLikeInfoCommand {
 export class UpdatePostLikeInfoUseCase
   implements ICommandHandler<UpdatePostLikeInfoCommand>
 {
-  constructor(protected likesInfoRepository: LikesInfoRepository) {}
+  constructor() {} //todo
 
-  async execute(command: UpdatePostLikeInfoCommand): Promise<boolean> {
+  async execute(command: UpdatePostLikeInfoCommand): Promise<void> {
     const { userId, postId, likeStatus } = command;
-    const postLikeInfo = await this.likesInfoRepository.getPostLikeInfoInstance(
-      postId,
-      userId,
-    );
-
-    if (!postLikeInfo) return false;
-
-    postLikeInfo.likeStatus = likeStatus;
-    await this.likesInfoRepository.save(postLikeInfo);
-    return true;
+    //todo update like info for post
   }
 }

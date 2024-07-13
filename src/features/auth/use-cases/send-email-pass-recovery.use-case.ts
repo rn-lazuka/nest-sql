@@ -2,7 +2,7 @@ import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
 import add from 'date-fns/add';
 import { v4 as uuidv4 } from 'uuid';
 import { EmailManager } from '../../../infrastructure/managers/email-manager';
-import { UsersRepository } from '../../users/usersRepository';
+import { UsersRepository } from '../../users/users-repository';
 import { UsersQueryRepository } from '../../users/users.query-repository';
 
 export class SendEmailPassRecoveryCommand {

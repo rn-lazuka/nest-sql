@@ -2,9 +2,7 @@ import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
 import { JwtQueryRepository } from '../../jwt/jwt.query.repository';
 import { DevicesRepository } from '../infrastructure/repository/devices.repository';
 import { UnauthorizedException } from '@nestjs/common';
-import { InjectModel } from '@nestjs/mongoose';
-import { Device, DeviceModelType } from '../domain/device.schema';
-import { DeviceModel } from '../types/device';
+import { Device } from '../domain/device.schema';
 
 export class CreateNewDeviceCommand {
   constructor(
@@ -20,8 +18,6 @@ export class CreateNewDeviceUseCase
   implements ICommandHandler<CreateNewDeviceCommand>
 {
   constructor(
-    @InjectModel(Device.name)
-    private deviceModel: DeviceModelType,
     protected jwtQueryRepository: JwtQueryRepository,
     protected deviceRepository: DevicesRepository,
   ) {}
@@ -32,16 +28,15 @@ export class CreateNewDeviceUseCase
     if (!payloadToken) {
       throw new UnauthorizedException();
     }
-    const device: DeviceModel = {
-      ip,
-      title,
-      userId,
-      deviceId: payloadToken.deviceId,
-      lastActiveDate: new Date(payloadToken.iat! * 1000).toISOString(),
-      expirationDate: payloadToken.exp! - payloadToken.iat!,
-    };
+    const device = new Device();
+    device.ip = ip;
+    device.title = title;
+    device.userId = userId;
+    device.deviceId = payloadToken.deviceId;
+    device.lastActiveDate = new Date(payloadToken.iat! * 1000).toISOString();
+    device.expirationDate = payloadToken.exp! - payloadToken.iat!;
 
-    await this.deviceRepository.saveDevice(device);
+    await this.deviceRepository.save(device);
     return;
   }
 }

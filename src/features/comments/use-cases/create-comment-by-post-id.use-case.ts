@@ -1,12 +1,12 @@
 import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
-import { ForbiddenException } from '@nestjs/common';
 import { CommentsRepository } from '../comments.repository';
 import { CommentViewType } from '../models/output/comment.output.model';
 import { LikeStatus } from '../../../infrastructure/helpers/enums/like-status';
 import { UsersQueryRepository } from '../../users/users.query-repository';
-import { InjectModel } from '@nestjs/mongoose';
-import { Post, PostModelType } from '../../posts/postSchema';
-import { Comment, CommentModelType } from '../commentSchema';
+import { Comment } from '../domain/comment.schema';
+import { InjectEntityManager } from '@nestjs/typeorm';
+import { EntityManager } from 'typeorm';
+import { Post } from '../../posts/domain/post.schema';
 
 export class CreateCommentByPostIdCommand {
   constructor(
@@ -21,10 +21,7 @@ export class CreateCommentByPostIdUseCase
   implements ICommandHandler<CreateCommentByPostIdCommand>
 {
   constructor(
-    @InjectModel(Post.name)
-    private postModel: PostModelType,
-    @InjectModel(Comment.name)
-    private commentModel: CommentModelType,
+    @InjectEntityManager() private readonly entityManager: EntityManager,
     protected usersQueryRepository: UsersQueryRepository,
     protected commentsRepository: CommentsRepository,
   ) {}
@@ -38,20 +35,31 @@ export class CreateCommentByPostIdUseCase
       return null;
     }
 
-    const post = await this.postModel.findById(postId);
+    const post = await this.entityManager.findOneBy(Post, { id: postId });
     if (!post) {
       return null;
     }
 
-    const comment = this.commentModel.createInstance(
-      content,
-      userId.toString(),
-      user.login,
-      postId,
-      this.commentModel,
-    );
+    const comment = new Comment();
+    comment.content = content;
+    comment.postId = postId;
+    comment.userId = userId;
 
-    await this.commentsRepository.save(comment);
-    return comment.convertToViewModel(LikeStatus.None);
+    const createdComment = await this.commentsRepository.save(comment);
+
+    return {
+      id: createdComment.id,
+      createdAt: createdComment.createdAt,
+      content: createdComment.content,
+      commentatorInfo: {
+        userId,
+        userLogin: user.login,
+      },
+      likesInfo: {
+        likesCount: 0,
+        dislikesCount: 0,
+        myStatus: LikeStatus.None,
+      },
+    };
   }
 }

@@ -1,77 +1,31 @@
-import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { ObjectId } from 'mongodb';
-import { HydratedDocument, Model } from 'mongoose';
-import { DeviceViewType } from '../api/models/output/device.output.model';
+import {
+  Column,
+  Entity,
+  JoinColumn,
+  ManyToOne,
+  PrimaryGeneratedColumn,
+} from 'typeorm';
+import { User } from '../../users/domain/user.schema';
 
-@Schema()
+@Entity()
 export class Device {
-  _id: ObjectId;
-
-  @Prop({ required: true })
+  @PrimaryGeneratedColumn('uuid')
+  id: string;
+  @Column()
   ip: string;
-
-  @Prop({ required: true })
+  @Column()
   title: string;
-
-  @Prop({ required: true })
+  @Column()
   lastActiveDate: string;
-
-  @Prop({ required: true })
+  @Column()
   deviceId: string;
-
-  @Prop({ required: true })
-  userId: string;
-
-  @Prop({ required: true })
+  @Column()
   expirationDate: number;
 
-  static createInstance(
-    ip: string,
-    title: string,
-    payloadToken: any, // TODO: как типизировать?
-    userId: string,
-    DeviceModel: DeviceModelType,
-  ): DeviceDocument {
-    return new DeviceModel({
-      ip,
-      title,
-      lastActiveDate: new Date(payloadToken.iat * 1000).toISOString(),
-      deviceId: payloadToken.deviceId,
-      userId: userId,
-      expirationDate: payloadToken.exp - payloadToken.iat,
-    });
-  }
+  @ManyToOne(() => User, (user) => user.devices)
+  @JoinColumn()
+  user: User;
 
-  convertToViewModel(): DeviceViewType {
-    return {
-      deviceId: this.deviceId,
-      title: this.title,
-      ip: this.ip,
-      lastActiveDate: this.lastActiveDate,
-    };
-  }
+  @Column()
+  userId: string;
 }
-
-export const DeviceSchema = SchemaFactory.createForClass(Device);
-
-DeviceSchema.statics = {
-  createInstance: Device.createInstance,
-};
-DeviceSchema.methods = {
-  convertToViewModel: Device.prototype.convertToViewModel,
-};
-
-export type DeviceModelStaticMethodsType = {
-  createInstance: (
-    ip: string,
-    title: string,
-    payloadToken: any,
-    userId: string,
-    DeviceModel: DeviceModelType,
-  ) => DeviceDocument;
-};
-
-export type DeviceDocument = HydratedDocument<Device>;
-
-export type DeviceModelType = Model<DeviceDocument> &
-  DeviceModelStaticMethodsType;

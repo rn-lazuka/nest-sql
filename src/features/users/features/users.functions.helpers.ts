@@ -1,9 +1,8 @@
 import { UserViewType } from '../models/output/user.output.model';
-import { UserDBType, UserFullData } from '../types';
+import { UserFullData } from '../types';
+import { User } from '../domain/user.schema';
 
-export const convertUserToViewModel = (
-  user: UserDBType | UserFullData,
-): UserViewType => {
+export const convertUserToViewModel = (user: User): UserViewType => {
   return {
     id: user.id,
     createdAt: user.createdAt,

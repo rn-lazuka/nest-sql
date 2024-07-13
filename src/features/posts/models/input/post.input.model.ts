@@ -21,7 +21,6 @@ export class UpdatePostLikeStatusModel {
 }
 
 export type PostQueryModel = {
-  searchNameTerm?: string;
   sortBy?: string;
   sortDirection?: string;
   pageNumber?: string | number;
@@ -70,6 +69,8 @@ export class PostCreateFromBlogModel {
   @MaxLength(1000, { message: 'Max length 1000 symbols' })
   content: string;
 }
+
+export class PostUpdateFromBlogModel extends PostCreateFromBlogModel {}
 
 export interface PostCreateBody {
   title: string;

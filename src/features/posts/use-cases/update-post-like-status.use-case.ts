@@ -1,12 +1,9 @@
 import { CommandBus, CommandHandler, ICommandHandler } from '@nestjs/cqrs';
-import { PostsRepository } from '../postsRepository';
-import { LikesInfoQueryRepository } from '../../likes-info/infrastructure/query.repository/likes-info.query.repository';
+import { PostsRepository } from '../posts-repository';
 import { LikeStatus } from '../../../infrastructure/helpers/enums/like-status';
-import { AddPostLikeInfoCommand } from '../../likes-info/use-cases/add-post-like-info.use-case';
-import { UpdatePostLikeInfoCommand } from '../../likes-info/use-cases/update-post-like-info.use-case';
-import { getUpdatedLikesCountForPost } from '../utils/getUpdatedLikesCountForPost';
-import { PostsQueryRepository } from '../postsQueryRepository';
+import { PostsQueryRepository } from '../posts-query-repository';
 import { UsersQueryRepository } from '../../users/users.query-repository';
+import { PostLike } from '../domain/post-like.schema';
 
 export class UpdatePostLikeStatusCommand {
   constructor(
@@ -25,7 +22,6 @@ export class UpdatePostLikeStatusUseCase
     protected usersQueryRepository: UsersQueryRepository,
     protected postsQueryRepository: PostsQueryRepository,
     protected postsRepository: PostsRepository,
-    protected likesInfoQueryRepository: LikesInfoQueryRepository,
   ) {}
 
   async execute(command: UpdatePostLikeStatusCommand): Promise<boolean> {
@@ -34,33 +30,23 @@ export class UpdatePostLikeStatusUseCase
     if (!post) {
       return false;
     }
+
     const user = await this.usersQueryRepository.getUserById(userId);
-    const postLikeInfo =
-      await this.likesInfoQueryRepository.getPostLikesInfoByUserId(
-        postId,
-        userId,
-      );
+    if (!user) {
+      return false;
+    }
+    let postLikeInfo = await this.postsQueryRepository.getPostLikeInfo(postId);
+
     if (!postLikeInfo) {
-      await this.commandBus.execute(
-        new AddPostLikeInfoCommand(userId, postId, user!.login, likeStatus),
-      );
+      postLikeInfo = new PostLike();
+      postLikeInfo.login = user.login;
+      postLikeInfo.postId = postId;
+      postLikeInfo.userId = userId;
     }
-    if (postLikeInfo && postLikeInfo.likeStatus !== likeStatus) {
-      await this.commandBus.execute(
-        new UpdatePostLikeInfoCommand(userId, postId, likeStatus),
-      );
-    }
-    const likesInfo = getUpdatedLikesCountForPost({
-      postLikeInfo,
-      likeStatus,
-      post,
-    });
-    if (postLikeInfo?.likeStatus !== likeStatus) {
-      await this.postsRepository.updatePostLikeInfo(postId, likesInfo);
-    }
-    if (postLikeInfo?.likeStatus === likeStatus) {
-      return true;
-    }
+    postLikeInfo.likeStatus = likeStatus;
+
+    await this.postsRepository.savePostLikeInfo(postLikeInfo);
+
     return true;
   }
 }

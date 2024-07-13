@@ -1,25 +1,14 @@
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 import { ConfigModule } from '@nestjs/config';
-import { UsersController } from './features/users/usersController';
-import { UsersRepository } from './features/users/usersRepository';
+import { UsersRepository } from './features/users/users-repository';
 import * as process from 'process';
-import {
-  Comment,
-  CommentatorInfo,
-  CommentatorInfoSchema,
-  CommentSchema,
-  LikesInfo,
-  LikesInfoSchema,
-} from './features/comments/commentSchema';
-import { CommentsController } from './features/comments/commentsController';
+import { CommentsController } from './features/comments/comments.controller';
 import { CommentsQueryRepository } from './features/comments/comments.query-repository';
-import { Post, PostSchema } from './features/posts/postSchema';
-import { Blog, BlogSchema } from './features/blogs/blogSchema';
-import { BlogsController } from './features/blogs/blogsController';
-import { PostsController } from './features/posts/postsController';
+import { BlogsController } from './features/blogs/blogs-controller';
+import { PostsController } from './features/posts/posts-controller';
 import { BlogsRepository } from './features/blogs/blogs-repository';
-import { PostsRepository } from './features/posts/postsRepository';
+import { PostsRepository } from './features/posts/posts-repository';
 import { TestsRepository } from './features/tests/testsRepository';
 import { TestsController } from './features/tests/testsController';
 import { AuthController } from './features/auth/api/auth.controller';
@@ -27,9 +16,7 @@ import { DevicesController } from './features/devices/api/devices.controller';
 import { CommentsRepository } from './features/comments/comments.repository';
 import { DevicesQueryRepository } from './features/devices/infrastructure/query.repository/devices.query.repository';
 import { DevicesRepository } from './features/devices/infrastructure/repository/devices.repository';
-import { LikesInfoQueryRepository } from './features/likes-info/infrastructure/query.repository/likes-info.query.repository';
-import { LikesInfoRepository } from './features/likes-info/infrastructure/repository/likes-info.repository';
-import { PostsQueryRepository } from './features/posts/postsQueryRepository';
+import { PostsQueryRepository } from './features/posts/posts-query-repository';
 import { UsersQueryRepository } from './features/users/users.query-repository';
 import { JwtQueryRepository } from './features/jwt/jwt.query.repository';
 import { IsBlogByIdExistsConstraint } from './infrastructure/decorators/posts/blog-id-exists.decorator';
@@ -41,15 +28,6 @@ import { EmailManager } from './infrastructure/managers/email-manager';
 import { CryptoAdapter } from './infrastructure/adapters/crypto.adapter';
 import { EmailAdapter } from './infrastructure/adapters/email.adapter';
 import { ThrottlerModule } from '@nestjs/throttler';
-import {
-  CommentLikesInfo,
-  CommentsLikesInfoSchema,
-} from './features/likes-info/domain/comment-likes-info.schema';
-import {
-  PostLikesInfo,
-  PostsLikesInfoSchema,
-} from './features/likes-info/domain/post-likes-info.schema';
-import { Device, DeviceSchema } from './features/devices/domain/device.schema';
 import { JwtModule } from '@nestjs/jwt';
 import { ConfirmEmailUseCase } from './features/auth/use-cases/confirm-email.use-case';
 import { LoginUserUseCase } from './features/auth/use-cases/login-user.use-case';
@@ -82,19 +60,41 @@ import { UpdatePostLikeStatusUseCase } from './features/posts/use-cases/update-p
 import { CreateUserUseCase } from './features/users/use-cases/create-user.use-case';
 import { GetUserIdByAccessTokenUseCase } from './features/jwt/use-cases/getUserIdByAccessToken.use-case';
 import { CqrsModule } from '@nestjs/cqrs';
-import { TypeOrmModule } from '@nestjs/typeorm';
+import { TypeOrmModule, TypeOrmModuleOptions } from '@nestjs/typeorm';
 import { CheckIsTokenValidUseCase } from './features/jwt/use-cases/check-is-token-valid.use-case';
 import { AuthRepository } from './features/auth/infrastructure/repository/auth.repository';
-import {
+import { UsersSaController } from './features/users/users-sa-controller';
+import { UpdatePostForBlogUseCase } from './features/blogs/use-cases/update-post-for-blog.use-case';
+import { DeletePostForBlogUseCase } from './features/blogs/use-cases/delete-post-for-blog.use-case';
+import { BlogsSaController } from './features/blogs/blogs-sa-controller';
+import { RefreshToken } from './features/auth/domain/refresh-token.schema';
+import { Device } from './features/devices/domain/device.schema';
+import { User } from './features/users/domain/user.schema';
+import { UserEmailConfirmation } from './features/users/domain/user-email-confirmation.schema';
+import { UserPasswordRecovery } from './features/users/domain/user-password-recovery.schema';
+import { Blog } from './features/blogs/domain/blog.schema';
+import { PostLike } from './features/posts/domain/post-like.schema';
+import { Post } from './features/posts/domain/post.schema';
+import { Comment } from './features/comments/domain/comment.schema';
+import { CommentLike } from './features/comments/domain/comment-like.schema';
+
+const features = [
   RefreshToken,
-  RefreshTokenSchema,
-} from './features/auth/domain/refreshToken.schema';
-import { UsersSAController } from './features/users/usersSAController';
+  Device,
+  User,
+  UserEmailConfirmation,
+  UserPasswordRecovery,
+  Blog,
+  Post,
+  PostLike,
+  Comment,
+  CommentLike,
+];
 
 const queryRepositories = [
   CommentsQueryRepository,
   DevicesQueryRepository,
-  LikesInfoQueryRepository,
+  // LikesInfoQueryRepository,
   PostsQueryRepository,
   UsersQueryRepository,
   JwtQueryRepository,
@@ -104,7 +104,7 @@ const repositories = [
   BlogsRepository,
   CommentsRepository,
   DevicesRepository,
-  LikesInfoRepository,
+  // LikesInfoRepository,
   PostsRepository,
   UsersRepository,
   AuthRepository,
@@ -112,6 +112,8 @@ const repositories = [
 ];
 
 const handlers = [
+  DeletePostForBlogUseCase,
+  UpdatePostForBlogUseCase,
   ConfirmEmailUseCase,
   LoginUserUseCase,
   RegisterUserUseCase,
@@ -144,19 +146,22 @@ const handlers = [
   CheckIsTokenValidUseCase,
 ];
 
+export const dbOptions: TypeOrmModuleOptions = {
+  type: 'postgres',
+  host: 'localhost',
+  port: 5432,
+  username: process.env.POSTGRESQL_USERNAME,
+  password: process.env.POSTGRESQL_PASSWORD,
+  database: 'NestApp',
+  autoLoadEntities: true,
+  synchronize: true,
+};
+
 @Module({
   imports: [
     ConfigModule.forRoot(),
-    TypeOrmModule.forRoot({
-      type: 'postgres',
-      host: 'localhost',
-      port: 5432,
-      username: process.env.POSTGRESQL_USERNAME,
-      password: process.env.POSTGRESQL_PASSWORD,
-      database: 'NestApp',
-      autoLoadEntities: false,
-      synchronize: false,
-    }),
+    TypeOrmModule.forRoot(dbOptions),
+    TypeOrmModule.forFeature([...features]),
     ThrottlerModule.forRoot([
       {
         ttl: 10000,
@@ -166,26 +171,15 @@ const handlers = [
     CqrsModule,
     MongooseModule.forRoot(process.env.MONGO_URL!),
     JwtModule.register({}),
-    MongooseModule.forFeature([
-      { name: RefreshToken.name, schema: RefreshTokenSchema },
-      { name: Blog.name, schema: BlogSchema },
-      { name: Post.name, schema: PostSchema },
-      { name: Comment.name, schema: CommentSchema },
-      { name: LikesInfo.name, schema: LikesInfoSchema },
-      { name: CommentatorInfo.name, schema: CommentatorInfoSchema },
-      { name: CommentLikesInfo.name, schema: CommentsLikesInfoSchema },
-      { name: PostLikesInfo.name, schema: PostsLikesInfoSchema },
-      { name: Device.name, schema: DeviceSchema },
-    ]),
   ],
   controllers: [
     AuthController,
     BlogsController,
+    BlogsSaController,
     DevicesController,
     PostsController,
     CommentsController,
-    UsersController,
-    UsersSAController,
+    UsersSaController,
     TestsController,
   ],
   providers: [

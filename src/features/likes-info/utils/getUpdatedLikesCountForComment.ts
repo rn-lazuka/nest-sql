@@ -1,6 +1,6 @@
 import { LikeStatus } from '../../../infrastructure/helpers/enums/like-status';
 import { CommentViewType } from '../../comments/models/output/comment.output.model';
-import { CommentsLikesInfoDBType } from '../domain/types';
+import { CommentsLikesInfoDBType } from '../types';
 
 interface getUpdatedLikesCountForComment {
   likeStatus: LikeStatus;

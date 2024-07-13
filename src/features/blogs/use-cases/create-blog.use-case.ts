@@ -1,9 +1,8 @@
 import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
 import { CreateBlogModel } from '../models/input/blog.input.model';
 import { BlogViewType } from '../models/output/blog.output.model';
-import { Blog, BlogModelType } from '../blogSchema';
 import { BlogsRepository } from '../blogs-repository';
-import { InjectModel } from '@nestjs/mongoose';
+import { convertBlogToViewModel } from '../features/blogs.functions.helpers';
 
 export class CreateBlogCommand {
   constructor(public createBlogModel: CreateBlogModel) {}
@@ -11,16 +10,11 @@ export class CreateBlogCommand {
 
 @CommandHandler(CreateBlogCommand)
 export class CreateBlogUseCase implements ICommandHandler<CreateBlogCommand> {
-  constructor(
-    @InjectModel(Blog.name)
-    private blogModel: BlogModelType,
-    protected blogsRepository: BlogsRepository,
-  ) {}
+  constructor(protected blogsRepository: BlogsRepository) {}
 
   async execute(command: CreateBlogCommand): Promise<BlogViewType> {
     const { createBlogModel } = command;
-    const blog = this.blogModel.createInstance(createBlogModel, this.blogModel);
-    await this.blogsRepository.save(blog);
-    return blog.convertToViewModel();
+    const blog = await this.blogsRepository.addBlog(createBlogModel);
+    return convertBlogToViewModel(blog);
   }
 }

@@ -1,4 +1,4 @@
-import { NewestLikesType } from '../domain/types';
+import { NewestLikesType } from '../types';
 
 export function updateNewestLikesInfo(newestLikes: NewestLikesType) {
   const updatedNewestLikesInfo: any = [];

@@ -1,5 +1,5 @@
 import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
-import { UsersRepository } from '../../users/usersRepository';
+import { UsersRepository } from '../../users/users-repository';
 import { UsersQueryRepository } from '../../users/users.query-repository';
 import { BadRequestException } from '@nestjs/common';
 import { ErrorsTypeService } from '../application/dto/auth.dto.service';

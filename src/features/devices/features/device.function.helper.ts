@@ -1,9 +1,7 @@
-import { DeviceDBType } from '../domain/devices.db.types';
 import { DeviceViewType } from '../api/models/output/device.output.model';
+import { Device } from '../domain/device.schema';
 
-export const convertDeviceToViewModel = (
-  device: DeviceDBType,
-): DeviceViewType => ({
+export const convertDeviceToViewModel = (device: Device): DeviceViewType => ({
   deviceId: device.deviceId,
   title: device.title,
   lastActiveDate: device.lastActiveDate,

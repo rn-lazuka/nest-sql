@@ -15,7 +15,7 @@ export class IsBlogByIdExistsConstraint
 
   async validate(value: string, args: ValidationArguments | any) {
     const blogId = args.object.blogId;
-    const blog = await this.blogsRepository.getBlogInstance(blogId);
+    const blog = await this.blogsRepository.getBlogInfo(blogId);
     return !!blog;
   }
 

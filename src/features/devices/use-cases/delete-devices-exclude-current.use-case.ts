@@ -26,6 +26,7 @@ export class DeleteDevicesExcludeCurrentUseCase
 
     const result = await this.deviceRepository.deleteDevicesExcludeCurrent(
       payloadToken.deviceId,
+      payloadToken.userId,
     );
     if (!result) {
       throw new Error('Deletion failed');

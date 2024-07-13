@@ -1,75 +1,45 @@
 import { Injectable } from '@nestjs/common';
-import { DeviceModel } from '../../types/device';
-import { InjectDataSource } from '@nestjs/typeorm';
-import { DataSource } from 'typeorm';
-import { DeviceDBType } from '../../domain/devices.db.types';
+import { InjectDataSource, InjectRepository } from '@nestjs/typeorm';
+import { DataSource, Repository } from 'typeorm';
+import { Device } from '../../domain/device.schema';
 
 @Injectable()
 export class DevicesRepository {
-  constructor(@InjectDataSource() protected dataSource: DataSource) {}
+  constructor(
+    @InjectDataSource() protected dataSource: DataSource,
+    @InjectRepository(Device)
+    private readonly devicesRepository: Repository<Device>,
+  ) {}
 
-  async saveDevice(device: DeviceModel): Promise<void> {
-    await this.dataSource.query(
-      `
-    INSERT INTO public.devices(ip, title, "lastActiveDate", "deviceId", "userId", "expirationDate")
-    VALUES ($1,$2,$3,$4,$5,$6);
-    `,
-      [
-        device.ip,
-        device.title,
-        device.lastActiveDate,
-        device.deviceId,
-        device.userId,
-        device.expirationDate,
-      ],
-    );
+  async save(device: Device): Promise<void> {
+    await this.devicesRepository.save(device);
   }
 
-  async updateDeviceLastActiveDate(
-    lastActiveDate: string,
+  async deleteDevicesExcludeCurrent(
     deviceId: string,
-  ): Promise<void> {
-    await this.dataSource.query(
-      `
-      UPDATE public.devices as d
-      SET "lastActiveDate"=$1
-      WHERE d."deviceId"=$2;
-    `,
-      [lastActiveDate, deviceId],
-    );
-  }
+    userId: string,
+  ): Promise<boolean> {
+    const res = await this.devicesRepository
+      .createQueryBuilder()
+      .delete()
+      .where('userId = :userId AND id != :currentDeviceId', {
+        deviceId,
+        userId,
+      })
+      .execute();
 
-  async getDeviceInfo(deviceId: string): Promise<null | DeviceDBType> {
-    const res = await this.dataSource.query(
-      `
-      SELECT u.*
-      FROM public.devices as d
-      WHERE d."deviceId"=$1;
-    `,
-      [deviceId],
-    );
-    return res[0];
-  }
-
-  async deleteDevicesExcludeCurrent(deviceId: string): Promise<boolean> {
-    await this.dataSource.query(
-      `
-      DELETE FROM public.devices as d
-      WHERE d."deviceId" <> $1;
-    `,
-      [deviceId],
-    );
-    return true;
+    return !!res.affected;
   }
 
   async deleteDeviceById(deviceId: string): Promise<boolean> {
-    await this.dataSource.query(
-      `
-      DELETE FROM public.devices as d
-      WHERE d."deviceId" = $1;
-    `,
-      [deviceId],
-    );
-    return true;
+    const res = await this.devicesRepository
+      .createQueryBuilder()
+      .delete()
+      .where('deviceId = :deviceId', {
+        deviceId,
+      })
+      .execute();
+
+    return !!res.affected;
   }
 }

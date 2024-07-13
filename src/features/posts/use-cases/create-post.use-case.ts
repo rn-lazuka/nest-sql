@@ -1,16 +1,12 @@
 import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
-import {
-  PostCreateBody,
-  PostCreateModel,
-} from '../models/input/post.input.model';
+import { PostCreateModel } from '../models/input/post.input.model';
 import { PostViewType } from '../models/output/post.output.model';
-import { InjectModel } from '@nestjs/mongoose';
-import { Post, PostModelType } from '../postSchema';
 import { BlogsRepository } from '../../blogs/blogs-repository';
-import { PostsRepository } from '../postsRepository';
-import { LikesInfoQueryRepository } from '../../likes-info/infrastructure/query.repository/likes-info.query.repository';
+import { PostsRepository } from '../posts-repository';
 import { updateNewestLikesInfo } from '../../likes-info/utils/updateNewestLikesInfo';
 import { LikeStatus } from '../../../infrastructure/helpers/enums/like-status';
+import { convertPostToViewModel } from '../features/posts.functions.helpers';
+import { Post } from '../domain/post.schema';
 
 export class CreatePostCommand {
   constructor(public createData: PostCreateModel) {}
@@ -19,35 +15,35 @@ export class CreatePostCommand {
 @CommandHandler(CreatePostCommand)
 export class CreatePostUseCase implements ICommandHandler<CreatePostCommand> {
   constructor(
-    @InjectModel(Post.name)
-    private postModel: PostModelType,
     protected blogsRepository: BlogsRepository,
     protected postsRepository: PostsRepository,
-    protected likesInfoQueryRepository: LikesInfoQueryRepository,
   ) {}
 
   async execute(command: CreatePostCommand): Promise<null | PostViewType> {
     const { createData } = command;
-    const blog = await this.blogsRepository.getBlogInstance(createData.blogId);
+    const blog = await this.blogsRepository.getBlogInfo(createData.blogId);
     if (!blog) {
       return null;
     }
+    const post = new Post();
+    post.content = createData.content;
+    post.title = createData.title;
+    post.shortDescription = createData.shortDescription;
+    post.blogId = createData.blogId;
+    post.blogName = blog.name;
+    post.blogName = blog.name;
 
-    const postData: PostCreateBody = {
-      ...createData,
-      blogName: blog.name,
-    };
-
-    const post = this.postModel.createInstance(postData, this.postModel);
-    await this.postsRepository.save(post);
+    const createdPost = await this.postsRepository.savePost(post);
 
     // find last 3 Likes
-    const newestLikes =
-      await this.likesInfoQueryRepository.getNewestLikesOfPost(
-        post._id.toString(),
-      );
-    const updatedNewestLikes = updateNewestLikesInfo(newestLikes);
+    // const newestLikes =
+    //   await this.likesInfoQueryRepository.getNewestLikesOfPost(post.id);
+    //todo
+    const updatedNewestLikes = updateNewestLikesInfo([]);
     const myStatus = LikeStatus.None;
-    return post.convertToViewModel(myStatus, updatedNewestLikes);
+    // return convertPostToViewModel({ ...createdPost, myStatus }, updatedNewestLikes);
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+    //@ts-ignore
+    return createdPost as PostViewType;
   }
 }

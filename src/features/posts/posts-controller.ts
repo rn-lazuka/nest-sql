@@ -26,10 +26,9 @@ import {
   CommentsPaginationType,
   CommentViewType,
 } from '../comments/models/output/comment.output.model';
-import { CommentsQueryRepository } from '../comments/comments.query-repository';
 import { BasicAuthGuard } from '../../infrastructure/guards/basic-auth.guard';
 import { CurrentUserId } from '../../infrastructure/decorators/auth/current-user-id.param.decorator';
-import { PostsQueryRepository } from './postsQueryRepository';
+import { PostsQueryRepository } from './posts-query-repository';
 import { JwtAccessNotStrictGuard } from '../../infrastructure/guards/jwt-access-not-strict.guard';
 import {
   CommentQueryModel,
@@ -38,7 +37,7 @@ import {
 import { JwtAccessGuard } from '../../infrastructure/guards/jwt-access.guard';
 import { CommandBus } from '@nestjs/cqrs';
 import { CreateCommentByPostIdCommand } from '../comments/use-cases/create-comment-by-post-id.use-case';
-import { PostsRepository } from './postsRepository';
+import { PostsRepository } from './posts-repository';
 import { CreatePostCommand } from './use-cases/create-post.use-case';
 import { UpdatePostCommand } from './use-cases/update-post.use-case';
 import { UpdatePostLikeStatusCommand } from './use-cases/update-post-like-status.use-case';
@@ -48,7 +47,6 @@ export class PostsController {
   constructor(
     protected postsQueryRepository: PostsQueryRepository,
     protected postsRepository: PostsRepository,
-    protected commentsRepository: CommentsQueryRepository,
     protected commandBus: CommandBus,
   ) {}
 
@@ -83,7 +81,7 @@ export class PostsController {
     @Query() query: CommentQueryModel,
     @Res() res: Response<CommentsPaginationType>,
   ) {
-    const result = await this.commentsRepository.getCommentsByPostId(
+    const result = await this.postsQueryRepository.getCommentsByPostId(
       postId,
       query,
       userId,
@@ -124,6 +122,7 @@ export class PostsController {
       const result = await this.postsQueryRepository.getAllPosts(query, userId);
       res.status(HTTP_STATUS_CODE.OK_200).send(result);
     } catch (err) {
+      console.error(err);
       throw new InternalServerErrorException(
         `Something was wrong. Error: ${err}`,
       );
@@ -150,7 +149,7 @@ export class PostsController {
   async getPostById(
     @Param('id') postId: string,
     @CurrentUserId() userId: string | null,
-    @Res() res: Response<PostViewType>,
+    @Res() res: Response<any>,
   ) {
     const result = await this.postsQueryRepository.getPostById(postId, userId);
     result

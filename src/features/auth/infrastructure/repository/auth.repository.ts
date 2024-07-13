@@ -1,32 +1,21 @@
 import { Injectable } from '@nestjs/common';
-import { InjectDataSource } from '@nestjs/typeorm';
-import { DataSource } from 'typeorm';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { RefreshToken } from '../../domain/refresh-token.schema';
 
 @Injectable()
 export class AuthRepository {
-  constructor(@InjectDataSource() protected dataSource: DataSource) {}
+  constructor(
+    @InjectRepository(RefreshToken)
+    private readonly refreshTokenRepository: Repository<RefreshToken>,
+  ) {}
 
   async isRefreshTokenActive(refreshToken: string): Promise<boolean> {
-    const result = await this.dataSource.query(
-      `
-    SELECT "refreshToken"
-    FROM public.tokens
-    WHERE "refreshToken" = $1
-    `,
-      [refreshToken],
-    );
-
-    return !result.length;
+    const res = await this.refreshTokenRepository.findOneBy({ refreshToken });
+    return !res;
   }
 
-  async save(deactivatedRefreshToken: string): Promise<void> {
-    await this.dataSource.query(
-      `
-        INSERT INTO public.tokens("refreshToken")
-        VALUES ($1);
-    `,
-      [deactivatedRefreshToken],
-    );
-    return;
+  async save(deactivatedRefreshToken: RefreshToken): Promise<void> {
+    await this.refreshTokenRepository.save(deactivatedRefreshToken);
   }
 }

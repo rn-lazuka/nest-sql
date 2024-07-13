@@ -20,8 +20,9 @@ export class UpdateCommentUseCase
     const { content, userId, commentId } = command;
     const comment = await this.commentsRepository.getCommentInstance(commentId);
     if (!comment) return false;
-    if (comment.commentatorInfo.userId !== userId)
+    if (comment.userId !== userId) {
       throw new ForbiddenException();
+    }
 
     comment.content = content;
     await this.commentsRepository.save(comment);

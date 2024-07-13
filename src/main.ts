@@ -1,3 +1,5 @@
+import { config } from 'dotenv';
+config();
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { BadRequestException, ValidationPipe } from '@nestjs/common';
@@ -31,7 +33,7 @@ async function bootstrap() {
   );
   app.useGlobalFilters(new AllExceptionsFilter());
   useContainer(app.select(AppModule), { fallbackOnErrors: true });
-  await app.listen(5000);
+  await app.listen(3000);
 }
 
 bootstrap();

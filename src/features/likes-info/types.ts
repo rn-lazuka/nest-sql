@@ -1,5 +1,5 @@
 import { ObjectId } from 'mongodb';
-import { LikeStatus } from '../../../infrastructure/helpers/enums/like-status';
+import { LikeStatus } from '../../infrastructure/helpers/enums/like-status';
 
 export type NewestLikeType = {
   addedAt: string;

@@ -1,10 +1,9 @@
 import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
-import { CreateUserModel } from '../../users/models/input/user.input.model';
-import add from 'date-fns/add';
-import { v4 as uuidv4 } from 'uuid';
 import { CryptoAdapter } from '../../../infrastructure/adapters/crypto.adapter';
 import { EmailManager } from '../../../infrastructure/managers/email-manager';
-import { UsersRepository } from '../../users/usersRepository';
+import { UsersRepository } from '../../users/users-repository';
+import { User } from '../../users/domain/user.schema';
+import { UserEmailConfirmation } from '../../users/domain/user-email-confirmation.schema';
 
 export class RegisterUserCommand {
   constructor(
@@ -27,27 +26,22 @@ export class RegisterUserUseCase
   async execute(command: RegisterUserCommand): Promise<void> {
     const { email, login, password } = command;
     const passwordHash = await this.cryptoAdapter.generateHash(password);
-    const userInfo: CreateUserModel = {
-      email,
-      login,
-      passwordHash,
-    };
 
-    const emailConfirmationData = {
-      confirmationCode: uuidv4(),
-      expirationDate: add(new Date(), { hours: 5, seconds: 20 }),
-      isConfirmed: false,
-    };
+    const newUser = new User();
+    newUser.email = email;
+    newUser.login = login;
+    newUser.passwordHash = passwordHash;
 
-    const createdUser = await this.usersRepository.saveUserData(userInfo);
-    const createdConfirmData =
-      await this.usersRepository.saveUserConfirmationData(
-        createdUser.id,
-        emailConfirmationData,
-      );
+    const createdUser = await this.usersRepository.createUser(newUser);
+    const emailConfirmationData = new UserEmailConfirmation();
+    emailConfirmationData.userId = createdUser.id;
+    await this.usersRepository.saveUserEmailConfirmationData(
+      emailConfirmationData,
+    );
+
     await this.emailManager.sendEmailConfirmationCode(
       createdUser.email,
-      createdConfirmData.confirmationCode,
+      createdUser.emailConfirmation.confirmationCode,
     );
 
     return;

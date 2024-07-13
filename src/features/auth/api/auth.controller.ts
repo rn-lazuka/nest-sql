@@ -49,7 +49,7 @@ export class AuthController {
     protected usersQueryRepository: UsersQueryRepository,
   ) {}
 
-  @UseGuards(LocalAuthGuard)
+  // @UseGuards(LocalAuthGuard)
   @Post('login')
   async loginUser(
     @CurrentUserId() userId: string,
@@ -57,6 +57,7 @@ export class AuthController {
     @Ip() ip: string,
     @TitleOfDevice() title: string,
   ) {
+    debugger;
     const result = await this.commandBus.execute(new LoginUserCommand(userId));
     if (result) {
       await this.commandBus.execute(

@@ -1,8 +1,6 @@
 import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
 import { UpdateBlogModel } from '../models/input/blog.input.model';
-import { Blog, BlogModelType } from '../blogSchema';
 import { BlogsRepository } from '../blogs-repository';
-import { InjectModel } from '@nestjs/mongoose';
 
 export class UpdateBlogCommand {
   constructor(
@@ -13,21 +11,16 @@ export class UpdateBlogCommand {
 
 @CommandHandler(UpdateBlogCommand)
 export class UpdateBlogUseCase implements ICommandHandler<UpdateBlogCommand> {
-  constructor(
-    @InjectModel(Blog.name)
-    private blogModel: BlogModelType,
-    protected blogsRepository: BlogsRepository,
-  ) {}
+  constructor(protected blogsRepository: BlogsRepository) {}
 
   async execute(command: UpdateBlogCommand): Promise<boolean> {
     const { blogBody, id } = command;
-    const blog = await this.blogsRepository.getBlogInstance(id);
+    const blog = await this.blogsRepository.getBlogInfo(id);
     if (!blog) {
       return false;
     }
 
-    blog.updateBlogInfo(blog, blogBody);
-    await this.blogsRepository.save(blog);
+    await this.blogsRepository.updateBlogInfo(id, blogBody);
 
     return true;
   }

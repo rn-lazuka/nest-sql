@@ -12,7 +12,7 @@ export class JwtQueryRepository {
         secret: process.env.PRIVATE_KEY_REFRESH_TOKEN,
       });
     } catch (e) {
-      console.log(e);
+      console.error(e);
       return null;
     }
   }

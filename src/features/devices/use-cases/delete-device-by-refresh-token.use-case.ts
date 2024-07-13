@@ -1,9 +1,8 @@
 import { CommandBus, CommandHandler, ICommandHandler } from '@nestjs/cqrs';
 import { DevicesRepository } from '../infrastructure/repository/devices.repository';
 import { CheckIsTokenValidCommand } from '../../jwt/use-cases/check-is-token-valid.use-case';
-import { RefreshToken } from '../../auth/domain/refreshToken.schema';
 import { AuthRepository } from '../../auth/infrastructure/repository/auth.repository';
-import { InjectModel } from '@nestjs/mongoose';
+import { RefreshToken } from '../../auth/domain/refresh-token.schema';
 
 export class DeleteDeviceByRefreshTokenCommand {
   constructor(public refreshToken: string) {}
@@ -31,7 +30,9 @@ export class DeleteDeviceByRefreshTokenUseCase
       isTokenValid.deviceId,
     );
     if (isDeviceDeleted) {
-      await this.authRepository.save(refreshToken);
+      const deactivatedRefreshToken = new RefreshToken();
+      deactivatedRefreshToken.refreshToken = refreshToken;
+      await this.authRepository.save(deactivatedRefreshToken);
       return true;
     }
     return false;

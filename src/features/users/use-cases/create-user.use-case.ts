@@ -1,10 +1,12 @@
 import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
 import { CreateUserInputModel } from '../models/input/create-user.input.model';
 import { UserViewType } from '../models/output/user.output.model';
-import { CreateUserModel } from '../models/input/user.input.model';
-import { UsersRepository } from '../usersRepository';
+import { UsersRepository } from '../users-repository';
 import { CryptoAdapter } from '../../../infrastructure/adapters/crypto.adapter';
 import { convertUserToViewModel } from '../features/users.functions.helpers';
+import { User } from '../domain/user.schema';
+import { UserEmailConfirmation } from '../domain/user-email-confirmation.schema';
+import { UserPasswordRecovery } from '../domain/user-password-recovery.schema';
 
 export class CreateUserCommand {
   constructor(public inputBodyUser: CreateUserInputModel) {}
@@ -22,18 +24,18 @@ export class CreateUserUseCase implements ICommandHandler<CreateUserCommand> {
     const passwordHash = await this.cryptoAdapter.generateHash(
       inputBodyUser.password,
     );
+    const newUser = new User();
+    newUser.email = inputBodyUser.email;
+    newUser.login = inputBodyUser.login;
+    newUser.passwordHash = passwordHash;
 
-    const userInfo: CreateUserModel = {
-      email: inputBodyUser.email,
-      login: inputBodyUser.login,
-      passwordHash,
-    };
-
-    const createdUser = await this.usersRepository.saveUserData(userInfo);
-    await this.usersRepository.saveUserConfirmationData(createdUser.id, {
-      isConfirmed: true,
-    });
-
-    return convertUserToViewModel(createdUser);
+    const createdUser = await this.usersRepository.createUser(newUser);
+    const emailConfirmationData = new UserEmailConfirmation();
+    emailConfirmationData.userId = createdUser.id;
+    emailConfirmationData.isConfirmed = true;
+    await this.usersRepository.saveUserEmailConfirmationData(
+      emailConfirmationData,
+    );
+    return convertUserToViewModel(createdUser as User);
   }
 }

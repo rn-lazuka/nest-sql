@@ -1,11 +1,4 @@
-import {
-  IsEmail,
-  IsNotEmpty,
-  IsString,
-  Length,
-  Matches,
-  MaxLength,
-} from 'class-validator';
+import { IsNotEmpty, IsString, Matches, MaxLength } from 'class-validator';
 import { Transform } from 'class-transformer';
 
 export type BlogQueryModel = {
@@ -15,11 +8,6 @@ export type BlogQueryModel = {
   pageNumber?: number;
   pageSize?: number;
 };
-
-export class PasswordRecoveryModel {
-  @IsEmail({}, { message: 'Incorrect Email' })
-  email: string;
-}
 
 export class CreateBlogModel {
   @Transform(({ value }) => value?.trim())

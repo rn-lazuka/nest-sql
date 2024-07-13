@@ -1,12 +1,9 @@
 import { CommandBus, CommandHandler, ICommandHandler } from '@nestjs/cqrs';
 import { CommentsRepository } from '../comments.repository';
 import { LikeStatus } from '../../../infrastructure/helpers/enums/like-status';
-import { getUpdatedLikesCountForComment } from '../../likes-info/utils/getUpdatedLikesCountForComment';
-import { LikesInfoQueryRepository } from '../../likes-info/infrastructure/query.repository/likes-info.query.repository';
 import { UsersQueryRepository } from '../../users/users.query-repository';
 import { CommentsQueryRepository } from '../comments.query-repository';
-import { AddCommentLikeInfoCommand } from '../../likes-info/use-cases/add-comment-like-info.use-case';
-import { UpdateCommentLikeInfoCommand } from '../../likes-info/use-cases/update-comment-like-info.use-case';
+import { CommentLike } from '../domain/comment-like.schema';
 
 export class UpdateLikeStatusOfCommentCommand {
   constructor(
@@ -21,50 +18,33 @@ export class UpdateLikeStatusOfCommentUseCase
   implements ICommandHandler<UpdateLikeStatusOfCommentCommand>
 {
   constructor(
-    protected likesInfoQueryRepository: LikesInfoQueryRepository,
     protected commandBus: CommandBus,
-    protected commentsRepository: CommentsRepository,
     protected usersQueryRepository: UsersQueryRepository,
+    protected commentsRepository: CommentsRepository,
     protected commentsQueryRepository: CommentsQueryRepository,
   ) {}
 
   async execute(command: UpdateLikeStatusOfCommentCommand): Promise<boolean> {
     const { userId, commentId, likeStatus } = command;
-    const comment = await this.commentsQueryRepository.getCommentById(
-      commentId,
-      userId,
-    );
+    const comment = await this.commentsRepository.getCommentInstance(commentId);
     if (!comment) {
       return false;
     }
+    const user = await this.usersQueryRepository.getUserById(userId);
+    if (!user || user.id !== comment.userId) {
+      return false;
+    }
+    let commentLikeInfo =
+      await this.commentsQueryRepository.getCommentLikeInfo(commentId);
 
-    const commentLikeInfo =
-      await this.likesInfoQueryRepository.getCommentLikesInfoByUserId(
-        commentId,
-        userId,
-      );
     if (!commentLikeInfo) {
-      await this.commandBus.execute(
-        new AddCommentLikeInfoCommand(userId, commentId, likeStatus),
-      );
+      commentLikeInfo = new CommentLike();
+      commentLikeInfo.commentId = commentId;
+      commentLikeInfo.userId = userId;
     }
-    if (commentLikeInfo && commentLikeInfo.likeStatus !== likeStatus) {
-      await this.commandBus.execute(
-        new UpdateCommentLikeInfoCommand(userId, commentId, likeStatus),
-      );
-    }
-    const likesInfo = getUpdatedLikesCountForComment({
-      commentLikeInfo,
-      likeStatus,
-      comment,
-    });
+    commentLikeInfo.likeStatus = likeStatus;
 
-    if (commentLikeInfo?.likeStatus !== likeStatus) {
-      await this.commentsRepository.updateCommentLikeInfo(commentId, likesInfo);
-    }
-    if (commentLikeInfo?.likeStatus === likeStatus) {
-      return true;
-    }
+    await this.commentsRepository.saveCommentLikeInfo(commentLikeInfo);
     return true;
   }
 }

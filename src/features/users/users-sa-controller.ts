@@ -20,19 +20,19 @@ import {
 import { UsersQueryRepository } from './users.query-repository';
 import { CreateUserInputModel } from './models/input/create-user.input.model';
 import { BasicAuthGuard } from '../../infrastructure/guards/basic-auth.guard';
-import { UsersRepository } from './usersRepository';
+import { UsersRepository } from './users-repository';
 import { CommandBus } from '@nestjs/cqrs';
 import { CreateUserCommand } from './use-cases/create-user.use-case';
 
-@Controller('/users')
-export class UsersController {
+@Controller('/sa/users')
+export class UsersSaController {
   constructor(
     protected usersQueryRepository: UsersQueryRepository,
     protected usersRepository: UsersRepository,
     protected commandBus: CommandBus,
   ) {}
 
-  // @UseGuards(BasicAuthGuard)
+  @UseGuards(BasicAuthGuard)
   @Get()
   async getAllUsers(
     @Query() query: UserQueryModel,
@@ -42,6 +42,7 @@ export class UsersController {
       const result = await this.usersQueryRepository.getAllUsers(query);
       res.status(HTTP_STATUS_CODE.OK_200).send(result);
     } catch (err) {
+      console.error(err);
       throw new InternalServerErrorException(
         `Something was wrong. Error: ${err}`,
       );
@@ -60,6 +61,7 @@ export class UsersController {
       );
       res.status(HTTP_STATUS_CODE.CREATED_201).send(result);
     } catch (err) {
+      console.error(err);
       throw new InternalServerErrorException(
         `Something was wrong. Error: ${err}`,
       );
@@ -76,6 +78,7 @@ export class UsersController {
         ? res.sendStatus(HTTP_STATUS_CODE.NO_CONTENT_204)
         : res.sendStatus(HTTP_STATUS_CODE.NOT_FOUND_404);
     } catch (err) {
+      console.error(err);
       throw new InternalServerErrorException(
         `Something was wrong. Error: ${err}`,
       );

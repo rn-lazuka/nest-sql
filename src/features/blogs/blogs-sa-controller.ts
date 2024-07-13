@@ -30,19 +30,21 @@ import {
 import {
   PostCreateFromBlogModel,
   PostCreateModel,
+  PostUpdateFromBlogModel,
 } from '../posts/models/input/post.input.model';
-import { PostsQueryRepository } from '../posts/postsQueryRepository';
+import { PostsQueryRepository } from '../posts/posts-query-repository';
 import { BasicAuthGuard } from '../../infrastructure/guards/basic-auth.guard';
-import { JwtAccessNotStrictGuard } from '../../infrastructure/guards/jwt-access-not-strict.guard';
 import { CurrentUserId } from '../../infrastructure/decorators/auth/current-user-id.param.decorator';
 import { BlogsQueryRepository } from './blogs-query-repository';
 import { CommandBus } from '@nestjs/cqrs';
 import { CreateBlogCommand } from './use-cases/create-blog.use-case';
 import { UpdateBlogCommand } from './use-cases/update-blog.use-case';
 import { CreatePostCommand } from '../posts/use-cases/create-post.use-case';
+import { UpdatePostForBlogCommand } from './use-cases/update-post-for-blog.use-case';
+import { DeletePostForBlogCommand } from './use-cases/delete-post-for-blog.use-case';
 
-@Controller('/blogs')
-export class BlogsController {
+@Controller('/sa/blogs')
+export class BlogsSaController {
   constructor(
     protected commandBus: CommandBus,
     protected blogsQueryRepository: BlogsQueryRepository,
@@ -50,6 +52,7 @@ export class BlogsController {
     protected postsQueryRepository: PostsQueryRepository,
   ) {}
 
+  @UseGuards(BasicAuthGuard)
   @Get()
   async getAllBlogs(
     @Query() query: BlogQueryModel,
@@ -59,6 +62,7 @@ export class BlogsController {
       const result = await this.blogsQueryRepository.getAllBlogs(query);
       res.status(HTTP_STATUS_CODE.OK_200).send(result);
     } catch (err) {
+      console.error(err);
       throw new InternalServerErrorException(
         `Something was wrong. Error: ${err}`,
       );
@@ -77,6 +81,40 @@ export class BlogsController {
       );
       res.status(HTTP_STATUS_CODE.CREATED_201).send(result);
     } catch (err) {
+      console.error(err);
+      throw new InternalServerErrorException(
+        `Something was wrong. Error: ${err}`,
+      );
+    }
+  }
+
+  @UseGuards(BasicAuthGuard)
+  @Put(':id')
+  async updateBlog(
+    @Param('id') blogId: string,
+    @Body() dataForUpdate: UpdateBlogModel,
+    @Res() res: Response<void>,
+  ) {
+    const result = await this.commandBus.execute(
+      new UpdateBlogCommand(blogId, dataForUpdate),
+    );
+    res.sendStatus(
+      result ? HTTP_STATUS_CODE.NO_CONTENT_204 : HTTP_STATUS_CODE.NOT_FOUND_404,
+    );
+  }
+
+  @UseGuards(BasicAuthGuard)
+  @Delete(':id')
+  async deleteBlog(@Param('id') blogId: string, @Res() res: Response<void>) {
+    try {
+      const isDeleted = await this.blogsRepository.deleteBlog(blogId);
+      res.sendStatus(
+        isDeleted
+          ? HTTP_STATUS_CODE.NO_CONTENT_204
+          : HTTP_STATUS_CODE.NOT_FOUND_404,
+      );
+    } catch (err) {
+      console.error(err);
       throw new InternalServerErrorException(
         `Something was wrong. Error: ${err}`,
       );
@@ -99,49 +137,7 @@ export class BlogsController {
       : res.sendStatus(HTTP_STATUS_CODE.NOT_FOUND_404);
   }
 
-  @Get(':id')
-  async getBlogById(
-    @Param('id') blogId: string,
-    @Res() res: Response<BlogViewType>,
-  ) {
-    const result = await this.blogsQueryRepository.getBlogById(blogId);
-    result
-      ? res.status(HTTP_STATUS_CODE.OK_200).send(result)
-      : res.sendStatus(HTTP_STATUS_CODE.NOT_FOUND_404);
-  }
-
   @UseGuards(BasicAuthGuard)
-  @Put(':id')
-  async updateBlog(
-    @Param('id') blogId: string,
-    @Body() dataForUpdate: UpdateBlogModel,
-    @Res() res: Response<void>,
-  ) {
-    const result = await this.commandBus.execute(
-      new UpdateBlogCommand(blogId, dataForUpdate),
-    );
-    res.sendStatus(
-      result ? HTTP_STATUS_CODE.NO_CONTENT_204 : HTTP_STATUS_CODE.NOT_FOUND_404,
-    );
-  }
-
-  @UseGuards(BasicAuthGuard)
-  @Delete(':id')
-  async deleteBlog(@Param('id') blogId: string, @Res() res: Response<void>) {
-    try {
-      const result = await this.blogsRepository.deleteBlog(blogId);
-
-      result
-        ? res.sendStatus(HTTP_STATUS_CODE.NO_CONTENT_204)
-        : res.sendStatus(HTTP_STATUS_CODE.NOT_FOUND_404);
-    } catch (err) {
-      throw new InternalServerErrorException(
-        `Something was wrong. Error: ${err}`,
-      );
-    }
-  }
-
-  @UseGuards(JwtAccessNotStrictGuard)
   @Get(':blogId/posts')
   async getAllPostsOfBlog(
     @Param('blogId') blogId: string,
@@ -157,5 +153,30 @@ export class BlogsController {
     result
       ? res.status(HTTP_STATUS_CODE.OK_200).send(result)
       : res.sendStatus(HTTP_STATUS_CODE.NOT_FOUND_404);
+  }
+
+  @UseGuards(BasicAuthGuard)
+  @Put(':blogId/posts/:postId')
+  async updatePostForBlog(
+    @Param('blogId') blogId: string,
+    @Param('postId') postId: string,
+    @Body() dataForUpdate: PostUpdateFromBlogModel,
+    @Res() res: Response<void>,
+  ) {
+    await this.commandBus.execute(
+      new UpdatePostForBlogCommand(blogId, postId, dataForUpdate),
+    );
+    res.sendStatus(HTTP_STATUS_CODE.NO_CONTENT_204);
+  }
+
+  @UseGuards(BasicAuthGuard)
+  @Delete(':blogId/posts/:postId')
+  async deletePostForBlog(
+    @Param('blogId') blogId: string,
+    @Param('postId') postId: string,
+    @Res() res: Response<void>,
+  ) {
+    await this.commandBus.execute(new DeletePostForBlogCommand(blogId, postId));
+    res.sendStatus(HTTP_STATUS_CODE.NO_CONTENT_204);
   }
 }

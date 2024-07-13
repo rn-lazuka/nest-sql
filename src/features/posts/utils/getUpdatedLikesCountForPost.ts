@@ -1,5 +1,5 @@
 import { LikeStatus } from '../../../infrastructure/helpers/enums/like-status';
-import { PostsLikesInfoDBType } from '../../likes-info/domain/types';
+import { PostsLikesInfoDBType } from '../../likes-info/types';
 import { PostViewType } from '../models/output/post.output.model';
 
 interface getUpdatedLikesCountForPostProps {

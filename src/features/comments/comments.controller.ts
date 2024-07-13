@@ -102,6 +102,7 @@ export class CommentsController {
         ? res.json(result)
         : res.sendStatus(HTTP_STATUS_CODE.NOT_FOUND_404);
     } catch (err) {
+      console.error(err);
       throw new InternalServerErrorException(
         `Something was wrong. Error: ${err}`,
       );

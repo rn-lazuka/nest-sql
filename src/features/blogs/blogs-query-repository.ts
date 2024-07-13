@@ -1,39 +1,66 @@
 import { Injectable } from '@nestjs/common';
-import { InjectModel } from '@nestjs/mongoose';
-import { Blog, BlogModelType } from './blogSchema';
 import { BlogQueryModel } from './models/input/blog.input.model';
 import { getQueryParams } from '../../infrastructure/utils/getQueryParams';
 import { BlogViewType } from './models/output/blog.output.model';
+import { InjectDataSource } from '@nestjs/typeorm';
+import { DataSource } from 'typeorm';
+import { BlogDBType } from './types';
+import { convertBlogToViewModel } from './features/blogs.functions.helpers';
 
 @Injectable()
 export class BlogsQueryRepository {
-  constructor(@InjectModel(Blog.name) private blogModel: BlogModelType) {}
+  constructor(@InjectDataSource() protected dataSource: DataSource) {}
 
   async getAllBlogs(query: BlogQueryModel) {
-    const filter: any = {};
     const paramsOfElems = getQueryParams(query);
-    if (query.searchNameTerm) {
-      filter.name = { $regex: query.searchNameTerm, $options: 'i' };
-    }
-    const blogsCount = await this.blogModel.countDocuments(filter);
-    const blogs = await this.blogModel
-      .find(filter)
-      .skip((paramsOfElems.pageNumber - 1) * paramsOfElems.pageSize)
-      .limit(paramsOfElems.pageSize)
-      .sort(paramsOfElems.paramSort);
+
+    const res = await this.dataSource.query(
+      `
+      SELECT 
+        b.* 
+      FROM public.blog as b
+      WHERE 
+        (LOWER(b.name) like LOWER($1) OR $1 IS NULL)
+      ORDER BY b."${query.sortBy || 'createdAt'}" ${
+        query.sortDirection === 'asc' ? 'ASC' : 'DESC'
+      }
+      LIMIT $2 OFFSET $3;
+    `,
+      [
+        query.searchNameTerm ? `%${query.searchNameTerm}%` : null,
+        paramsOfElems.pageSize,
+        (paramsOfElems.pageNumber - 1) * paramsOfElems.pageSize,
+      ],
+    );
+    const countResponse = await this.dataSource.query(
+      `
+      SELECT COUNT(*) as count
+      FROM public.blog as b
+      WHERE       
+        (LOWER(b.name) like LOWER($1) OR $1 IS NULL)
+    `,
+      [query.searchNameTerm ? `%${query.searchNameTerm}%` : null],
+    );
 
     return {
-      pagesCount: Math.ceil(blogsCount / paramsOfElems.pageSize),
+      pagesCount: Math.ceil(+countResponse[0].count / paramsOfElems.pageSize),
       page: paramsOfElems.pageNumber,
       pageSize: paramsOfElems.pageSize,
-      totalCount: blogsCount,
-      items: blogs.map((p) => p.convertToViewModel()),
+      totalCount: +countResponse[0].count,
+      items: res.map((b: BlogDBType) => convertBlogToViewModel(b)),
     };
   }
 
   async getBlogById(id: string): Promise<BlogViewType | null> {
-    const blog = await this.blogModel.findById(id);
-    if (!blog) return null;
-    return blog.convertToViewModel();
+    const res = await this.dataSource.query(
+      `
+      SELECT 
+      b.* 
+      FROM public.blog as b
+      WHERE $1 = b."id"
+    `,
+      [id],
+    );
+    return !!res.length ? convertBlogToViewModel(res[0]) : null;
   }
 }
