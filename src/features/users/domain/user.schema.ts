@@ -1,5 +1,6 @@
 import {
   Column,
+  CreateDateColumn,
   Entity,
   JoinColumn,
   OneToMany,
@@ -21,8 +22,8 @@ export class User {
   login: string;
   @Column({ unique: true })
   email: string;
-  @Column({ default: new Date().toISOString() })
-  createdAt: string;
+  @CreateDateColumn({ type: 'timestamp' })
+  createdAt: Date;
   @Column({ default: process.env.PASSWORD_HASH })
   passwordHash: string;
 

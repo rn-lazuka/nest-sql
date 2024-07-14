@@ -97,10 +97,10 @@ export class UsersQueryRepository {
       ec."expirationDate" as "emailExpirationDate",
       pr."confirmationCode" as "recoveryConfirmationCode",
       pr."expirationDate" as "recoveryExpirationDate"
-      FROM public.users as u
-      LEFT JOIN public."emailConfirmation" as ec
+      FROM public.user as u
+      LEFT JOIN public.user_email_confirmation as ec
       ON ec."userId" = u."id"
-      LEFT JOIN public."passwordRecovery" as pr
+      LEFT JOIN public.user_password_recovery as pr
       ON pr."userId" = u.id
       WHERE ec."confirmationCode" = $1
     `,
@@ -126,10 +126,10 @@ export class UsersQueryRepository {
       ec."expirationDate" as "emailExpirationDate",
       pr."confirmationCode" as "recoveryConfirmationCode",
       pr."expirationDate" as "recoveryExpirationDate"
-      FROM public.users as u
-      LEFT JOIN public."emailConfirmation" as ec
+      FROM public.user as u
+      LEFT JOIN public.user_email_confirmation as ec
       ON ec."userId" = u."id"
-      LEFT JOIN public."passwordRecovery" as pr
+      LEFT JOIN public.user_password_recovery as pr
       ON pr."userId" = u.id
       WHERE pr."confirmationCode" = $1
     `,

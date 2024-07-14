@@ -1,5 +1,6 @@
 import {
   Column,
+  CreateDateColumn,
   Entity,
   JoinColumn,
   OneToMany,
@@ -11,8 +12,8 @@ import { Post } from '../../posts/domain/post.schema';
 export class Blog {
   @PrimaryGeneratedColumn('uuid')
   id: string;
-  @Column({ default: new Date().toISOString() })
-  createdAt: string;
+  @CreateDateColumn({ type: 'timestamp' })
+  createdAt: Date;
   @Column()
   websiteUrl: string;
   @Column()

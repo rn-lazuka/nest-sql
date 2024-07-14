@@ -2,52 +2,44 @@ import { Injectable } from '@nestjs/common';
 import { BlogQueryModel } from './models/input/blog.input.model';
 import { getQueryParams } from '../../infrastructure/utils/getQueryParams';
 import { BlogViewType } from './models/output/blog.output.model';
-import { InjectDataSource } from '@nestjs/typeorm';
-import { DataSource } from 'typeorm';
-import { BlogDBType } from './types';
+import { InjectDataSource, InjectEntityManager } from '@nestjs/typeorm';
+import { DataSource, EntityManager } from 'typeorm';
 import { convertBlogToViewModel } from './features/blogs.functions.helpers';
+import { Blog } from './domain/blog.schema';
 
 @Injectable()
 export class BlogsQueryRepository {
-  constructor(@InjectDataSource() protected dataSource: DataSource) {}
+  constructor(
+    @InjectDataSource() protected dataSource: DataSource,
+    @InjectEntityManager() private readonly entityManager: EntityManager,
+  ) {}
 
-  async getAllBlogs(query: BlogQueryModel) {
-    const paramsOfElems = getQueryParams(query);
+  async getAllBlogs(queryParams: BlogQueryModel) {
+    const { pageNumber, pageSize, sortBy, sortDirection, skip } =
+      getQueryParams(queryParams, 'createdAt', 'DESC');
 
-    const res = await this.dataSource.query(
-      `
-      SELECT 
-        b.* 
-      FROM public.blog as b
-      WHERE 
-        (LOWER(b.name) like LOWER($1) OR $1 IS NULL)
-      ORDER BY b."${query.sortBy || 'createdAt'}" ${
-        query.sortDirection === 'asc' ? 'ASC' : 'DESC'
-      }
-      LIMIT $2 OFFSET $3;
-    `,
-      [
-        query.searchNameTerm ? `%${query.searchNameTerm}%` : null,
-        paramsOfElems.pageSize,
-        (paramsOfElems.pageNumber - 1) * paramsOfElems.pageSize,
-      ],
-    );
-    const countResponse = await this.dataSource.query(
-      `
-      SELECT COUNT(*) as count
-      FROM public.blog as b
-      WHERE       
-        (LOWER(b.name) like LOWER($1) OR $1 IS NULL)
-    `,
-      [query.searchNameTerm ? `%${query.searchNameTerm}%` : null],
-    );
+    const query = this.entityManager
+      .getRepository(Blog)
+      .createQueryBuilder('b')
+      .where('LOWER(b.name) like LOWER(:name) OR :name IS NULL', {
+        name: queryParams.searchNameTerm
+          ? `%${queryParams.searchNameTerm.toLowerCase()}%`
+          : null,
+      })
+      .orderBy(`b.${sortBy}`, sortDirection)
+      .addOrderBy(`b.name COLLATE "C"`, 'ASC');
+
+    const [blogs, totalCount] = await query
+      .skip(skip)
+      .take(pageSize)
+      .getManyAndCount();
 
     return {
-      pagesCount: Math.ceil(+countResponse[0].count / paramsOfElems.pageSize),
-      page: paramsOfElems.pageNumber,
-      pageSize: paramsOfElems.pageSize,
-      totalCount: +countResponse[0].count,
-      items: res.map((b: BlogDBType) => convertBlogToViewModel(b)),
+      pagesCount: Math.ceil(totalCount / pageSize),
+      page: pageNumber,
+      pageSize: pageSize,
+      totalCount: totalCount,
+      items: blogs.map((b) => convertBlogToViewModel(b)),
     };
   }
 

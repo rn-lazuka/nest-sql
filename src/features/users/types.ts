@@ -11,7 +11,7 @@ export interface UserDBType {
   id: string;
   login: string;
   email: string;
-  createdAt: string;
+  createdAt: Date;
   passwordHash: string;
 }
 

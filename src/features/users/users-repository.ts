@@ -36,7 +36,7 @@ export class UsersRepository {
   async updateUserConfirmationData(id: string, data: EmailConfirmationInfo) {
     const res = await this.dataSource.query(
       `
-    UPDATE public."emailConfirmation" as ec
+    UPDATE public.user_email_confirmation as ec
     SET "confirmationCode"=$2, "expirationDate"=$3, "isConfirmed"=$4
     WHERE ec."userId" = $1
     RETURNING "isConfirmed","userId","confirmationCode","expirationDate";
@@ -49,7 +49,7 @@ export class UsersRepository {
   async updateUserConfirmationStatus(id: string) {
     const res = await this.dataSource.query(
       `
-    UPDATE public."emailConfirmation" as ec
+    UPDATE public.user_email_confirmation as ec
     SET "isConfirmed"=true
     WHERE ec."userId" = $1
     RETURNING "isConfirmed","userId","confirmationCode","expirationDate";
@@ -62,7 +62,7 @@ export class UsersRepository {
   async updatePassword(passwordHash: string, id: string): Promise<boolean> {
     const res = await this.dataSource.query(
       `
-    UPDATE public.users as u
+    UPDATE public.user as u
     SET "passwordHash"=$2
     WHERE u.id = $1
     RETURNING "passwordHash","id","login","email"
@@ -79,7 +79,7 @@ export class UsersRepository {
   ): Promise<boolean> {
     const res = await this.dataSource.query(
       `
-    UPDATE public."passwordRecovery" as pr
+    UPDATE public.user_password_recovery as pr
     SET "confirmationCode"=$2, "expirationDate"=$3
     WHERE pr."userId" = $1
     RETURNING "userId","confirmationCode","expirationDate";
@@ -106,7 +106,7 @@ export class UsersRepository {
 
       await this.dataSource.query(
         `
-      DELETE FROM public.devices
+      DELETE FROM public.device
       WHERE "userId" = $1;
     `,
         [id],
@@ -114,7 +114,7 @@ export class UsersRepository {
 
       await this.dataSource.query(
         `
-      DELETE FROM public."emailConfirmation"
+      DELETE FROM public.user_email_confirmation
       WHERE "userId" = $1;
     `,
         [id],
@@ -122,7 +122,7 @@ export class UsersRepository {
 
       await this.dataSource.query(
         `
-      DELETE FROM public."passwordRecovery"
+      DELETE FROM public.user_password_recovery
       WHERE "userId" = $1;
     `,
         [id],
@@ -130,7 +130,7 @@ export class UsersRepository {
 
       await this.dataSource.query(
         `
-      DELETE FROM public.users
+      DELETE FROM public.user
       WHERE id = $1;
     `,
         [id],

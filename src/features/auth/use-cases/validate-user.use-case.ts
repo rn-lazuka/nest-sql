@@ -20,6 +20,7 @@ export class ValidateUserUseCase
     const { password, loginOrEmail } = command;
     const user =
       await this.usersQueryRepository.getUserByLoginOrEmail(loginOrEmail);
+
     if (!user || !user.emailConfirmation.isConfirmed) {
       return false;
     }

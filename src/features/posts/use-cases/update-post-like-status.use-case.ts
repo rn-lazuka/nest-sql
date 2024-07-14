@@ -35,7 +35,11 @@ export class UpdatePostLikeStatusUseCase
     if (!user) {
       return false;
     }
-    let postLikeInfo = await this.postsQueryRepository.getPostLikeInfo(postId);
+
+    let postLikeInfo = await this.postsQueryRepository.getPostLikeInfo(
+      postId,
+      userId,
+    );
 
     if (!postLikeInfo) {
       postLikeInfo = new PostLike();

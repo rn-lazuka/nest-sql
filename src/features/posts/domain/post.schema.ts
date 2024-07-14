@@ -1,5 +1,6 @@
 import {
   Column,
+  CreateDateColumn,
   Entity,
   JoinColumn,
   ManyToOne,
@@ -20,8 +21,8 @@ export class Post {
   shortDescription: string;
   @Column()
   content: string;
-  @Column({ default: new Date().toISOString() })
-  createdAt: string;
+  @CreateDateColumn({ type: 'timestamp' })
+  createdAt: Date;
   @Column()
   blogId: string;
   @Column()

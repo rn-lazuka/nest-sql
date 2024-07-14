@@ -1,14 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { Comment } from './domain/comment.schema';
 import { LikeStatus } from '../../infrastructure/helpers/enums/like-status';
-import { CommentQueryModel } from './models/input/comment.input.model';
-import { getQueryParams } from '../../infrastructure/utils/getQueryParams';
 import {
   CommentLikeInfo,
-  CommentsPaginationType,
   CommentViewType,
 } from './models/output/comment.output.model';
-import { PostQueryModel } from '../posts/models/input/post.input.model';
 import { InjectEntityManager } from '@nestjs/typeorm';
 import { EntityManager } from 'typeorm';
 import { CommentLike } from './domain/comment-like.schema';
@@ -19,11 +15,17 @@ export class CommentsQueryRepository {
     @InjectEntityManager() private readonly entityManager: EntityManager,
   ) {}
 
-  async getCommentLikeInfo(commentId: string): Promise<CommentLike | null> {
+  async getCommentLikeInfo(
+    commentId: string,
+    userId: string,
+  ): Promise<CommentLike | null> {
     return await this.entityManager
       .getRepository(CommentLike)
       .createQueryBuilder('cl')
-      .where('cl.commentId = :commentId', { commentId })
+      .where('cl.commentId = :commentId AND cl.userId = :userId', {
+        commentId,
+        userId,
+      })
       .getOne();
   }
 

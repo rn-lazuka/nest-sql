@@ -34,6 +34,7 @@ export class RegisterUserUseCase
 
     const createdUser = await this.usersRepository.createUser(newUser);
     const emailConfirmationData = new UserEmailConfirmation();
+
     emailConfirmationData.userId = createdUser.id;
     await this.usersRepository.saveUserEmailConfirmationData(
       emailConfirmationData,
@@ -41,7 +42,7 @@ export class RegisterUserUseCase
 
     await this.emailManager.sendEmailConfirmationCode(
       createdUser.email,
-      createdUser.emailConfirmation.confirmationCode,
+      emailConfirmationData.confirmationCode,
     );
 
     return;

@@ -13,7 +13,7 @@ import { User } from '../../users/domain/user.schema';
 @Entity()
 export class CommentLike {
   @Column({ type: 'enum', enum: LikeStatus, default: LikeStatus.None })
-  likeStatus: string;
+  likeStatus: LikeStatus;
   @PrimaryColumn()
   commentId: string;
   @PrimaryColumn()

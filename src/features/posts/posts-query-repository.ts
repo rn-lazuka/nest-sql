@@ -29,11 +29,14 @@ export class PostsQueryRepository {
     protected blogsQueryRepository: BlogsQueryRepository,
   ) {}
 
-  async getPostLikeInfo(postId: string): Promise<PostLike | null> {
+  async getPostLikeInfo(
+    postId: string,
+    userId: string,
+  ): Promise<PostLike | null> {
     return await this.entityManager
       .getRepository(PostLike)
       .createQueryBuilder('pl')
-      .where('pl.postId = :postId', { postId })
+      .where('pl.postId = :postId AND pl.userId = :userId', { postId, userId })
       .getOne();
   }
 
@@ -42,7 +45,7 @@ export class PostsQueryRepository {
     userId: string | null,
   ): Promise<PostsPaginationType> {
     const { pageNumber, pageSize, sortBy, sortDirection, skip } =
-      getQueryParams(queryParams);
+      getQueryParams(queryParams, 'createdAt', 'DESC');
 
     const query = this.entityManager
       .getRepository(Post)
@@ -60,10 +63,10 @@ export class PostsQueryRepository {
           .getRepository(PostLike)
           .createQueryBuilder('pl')
           .select(
-            'COALESCE(COUNT(CASE WHEN pl.likeStatus = :likeStatus THEN 1 ELSE NULL END), 0) AS "likesCount"',
+            'COALESCE(CAST(COUNT(CASE WHEN pl.likeStatus = :likeStatus THEN 1 ELSE NULL END) as INTEGER), 0) AS "likesCount"',
           )
           .addSelect(
-            'COALESCE(COUNT(CASE WHEN pl.likeStatus = :dislikeStatus THEN 1 ELSE NULL END), 0) AS "dislikesCount"',
+            'COALESCE(CAST(COUNT(CASE WHEN pl.likeStatus = :dislikeStatus THEN 1 ELSE NULL END) as INTEGER), 0) AS "dislikesCount"',
           )
           .addSelect(
             'COALESCE(MAX(CASE WHEN pl.userId = :userId THEN pl.likeStatus ELSE :noneStatus END), :noneStatus) AS "myStatus"',
@@ -122,10 +125,10 @@ export class PostsQueryRepository {
       .getRepository(PostLike)
       .createQueryBuilder('pl')
       .select(
-        'COALESCE(COUNT(CASE WHEN pl.likeStatus = :likeStatus THEN 1 ELSE NULL END), 0) AS "likesCount"',
+        'COALESCE(CAST(COUNT(CASE WHEN pl.likeStatus = :likeStatus THEN 1 ELSE NULL END) as INTEGER), 0) AS "likesCount"',
       )
       .addSelect(
-        'COALESCE(COUNT(CASE WHEN pl.likeStatus = :dislikeStatus THEN 1 ELSE NULL END), 0) AS "dislikesCount"',
+        'COALESCE(CAST(COUNT(CASE WHEN pl.likeStatus = :dislikeStatus THEN 1 ELSE NULL END) as INTEGER), 0) AS "dislikesCount"',
       )
       .addSelect(
         'COALESCE(MAX(CASE WHEN pl.userId = :userId THEN pl.likeStatus ELSE :noneStatus END), :noneStatus) AS "myStatus"',
@@ -169,7 +172,7 @@ export class PostsQueryRepository {
       return null;
     }
     const { pageNumber, pageSize, sortBy, sortDirection, skip } =
-      getQueryParams(queryParams);
+      getQueryParams(queryParams, 'createdAt', 'DESC');
 
     const query = this.entityManager
       .getRepository(Post)
@@ -188,10 +191,10 @@ export class PostsQueryRepository {
           .getRepository(PostLike)
           .createQueryBuilder('pl')
           .select(
-            'COALESCE(COUNT(CASE WHEN pl.likeStatus = :likeStatus THEN 1 ELSE NULL END), 0) AS "likesCount"',
+            'COALESCE(CAST(COUNT(CASE WHEN pl.likeStatus = :likeStatus THEN 1 ELSE NULL END) as INTEGER), 0) AS "likesCount"',
           )
           .addSelect(
-            'COALESCE(COUNT(CASE WHEN pl.likeStatus = :dislikeStatus THEN 1 ELSE NULL END), 0) AS "dislikesCount"',
+            'COALESCE(CAST(COUNT(CASE WHEN pl.likeStatus = :dislikeStatus THEN 1 ELSE NULL END) as INTEGER), 0) AS "dislikesCount"',
           )
           .addSelect(
             'COALESCE(MAX(CASE WHEN pl.userId = :userId THEN pl.likeStatus ELSE :noneStatus END), :noneStatus) AS "myStatus"',
@@ -240,7 +243,7 @@ export class PostsQueryRepository {
     if (!validate(postId)) {
       return null; // Вернуть null, если id не является допустимым UUID
     }
-    const post = this.getPostById(postId, null);
+    const post = await this.getPostById(postId, null);
     if (!post) return null;
 
     const query = this.entityManager
@@ -261,10 +264,10 @@ export class PostsQueryRepository {
           .getRepository(CommentLike)
           .createQueryBuilder('cl')
           .addSelect(
-            'COALESCE(COUNT(CASE WHEN cl.likeStatus = :likeStatus THEN 1 ELSE NULL END), 0) AS "likesCount"',
+            'COALESCE(CAST(COUNT(CASE WHEN cl.likeStatus = :likeStatus THEN 1 ELSE NULL END) as INTEGER), 0) AS "likesCount"',
           )
           .addSelect(
-            'COALESCE(COUNT(CASE WHEN cl.likeStatus = :dislikeStatus THEN 1 ELSE NULL END), 0) AS "dislikesCount"',
+            'COALESCE(CAST(COUNT(CASE WHEN cl.likeStatus = :dislikeStatus THEN 1 ELSE NULL END) as INTEGER), 0) AS "dislikesCount"',
           )
           .addSelect(
             'COALESCE(MAX(CASE WHEN cl.userId = :userId THEN cl.likeStatus ELSE :noneStatus END), :noneStatus) AS "myStatus"',

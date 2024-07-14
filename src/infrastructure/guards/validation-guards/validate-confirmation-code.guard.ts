@@ -12,6 +12,7 @@ export class ValidateConfirmationCodeGuard implements CanActivate {
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest();
+
     if (!request.body.code) {
       throw new BadRequestException([
         { message: 'Code is incorrect', field: 'code' },

@@ -6,7 +6,7 @@ export interface PostDBType {
   shortDescription: string;
   content: string;
   blogId: string;
-  createdAt: string;
+  createdAt: Date;
 }
 
 export interface PostDBFullData extends PostDBType {

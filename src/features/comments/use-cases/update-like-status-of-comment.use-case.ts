@@ -34,8 +34,10 @@ export class UpdateLikeStatusOfCommentUseCase
     if (!user || user.id !== comment.userId) {
       return false;
     }
-    let commentLikeInfo =
-      await this.commentsQueryRepository.getCommentLikeInfo(commentId);
+    let commentLikeInfo = await this.commentsQueryRepository.getCommentLikeInfo(
+      commentId,
+      userId,
+    );
 
     if (!commentLikeInfo) {
       commentLikeInfo = new CommentLike();

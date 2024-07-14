@@ -14,7 +14,7 @@ export type CommentViewType = {
     userLogin: string;
   };
   likesInfo: CommentLikeInfo;
-  createdAt: string;
+  createdAt: Date;
 };
 
 export type CommentsPaginationType = {

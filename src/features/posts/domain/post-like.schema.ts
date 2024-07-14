@@ -1,5 +1,6 @@
 import {
   Column,
+  CreateDateColumn,
   Entity,
   JoinColumn,
   ManyToOne,
@@ -12,10 +13,10 @@ import { User } from '../../users/domain/user.schema';
 
 @Entity()
 export class PostLike {
-  @Column({ default: new Date().toISOString() })
-  addedAt: string;
+  @CreateDateColumn({ type: 'timestamp' })
+  addedAt: Date;
   @Column({ type: 'enum', enum: LikeStatus, default: LikeStatus.None })
-  likeStatus: string;
+  likeStatus: LikeStatus;
   @Column()
   login: string;
   @PrimaryColumn()

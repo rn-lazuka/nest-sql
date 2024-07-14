@@ -20,7 +20,7 @@ export class LoginUserUseCase implements ICommandHandler<LoginUserCommand> {
     command: LoginUserCommand,
   ): Promise<ARTokensAndUserIdType | null> {
     const { userId } = command;
-    debugger;
+
     const user = await this.usersQueryRepository.getUserById(userId);
     if (!user) {
       return null;

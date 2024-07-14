@@ -41,7 +41,7 @@ export class PostsRepository {
   async deletePost(id: string) {
     await this.dataSource.query(
       `
-      DELETE FROM public.posts as p
+      DELETE FROM public.post as p
       WHERE p.id = $1;
     `,
       [id],
