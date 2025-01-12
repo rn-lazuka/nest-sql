@@ -186,7 +186,7 @@ export const dbOptions: TypeOrmModuleOptions = {
     ...queryRepositories,
     ...repositories,
 
-    //Constraints
+    //Constraintss
     IsBlogByIdExistsConstraint,
 
     //Strategy
